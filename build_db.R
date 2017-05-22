@@ -1,4 +1,8 @@
-con = dbConnect("PostgreSQL", user = "Z_Smith", password = "Hexapoda27",
+
+
+
+
+con = dbConnect("PostgreSQL", user = "guest", password = "guest",
                 dbname = "WQT_May", host = "localhost", port = 5432)
 on.exit(dbDisconnect(con), add = TRUE)
 #==============================================================================
