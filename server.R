@@ -20,68 +20,164 @@ options(shiny.usecairo = TRUE)
 #wqt <- read.csv("./data/wqt.csv", stringsAsFactors = FALSE)
 
 shinyServer(function(input, output, session) {
-  #==============================================================================
-  # Provide a dropdown menu with all of the available site selections.
-  # Filters according to the HUC8 selected.
-  #==============================================================================
-  site.react <- reactive({
-    # Prevent red error message from appearing while data is loading.
-    if (is.null(input$HUC_8)) {
-      return(NULL)
-    }   
-    if (input$HUC_8 %in% "All HUCs") {
-      return(sort(huc8$SITE))
-    } 
-    final.vec <- sort(unique(huc8[huc8$HUC_8 %in% input$HUC_8, "SITE"]))
+  #============================================================================
+  # Identify the currently selected parameter and site.
+  #============================================================================
+  sel.param <- reactive({
+    if (input$query == "Site") final.vec <- input$PARAM.site
+    if (input$query == "Parameter") final.vec <- input$PARAM.param
     return(final.vec)
-  }) # End site.react
+  })
+  #----------------------------------------------------------------------------
+  sel.site <- reactive({
+    if (input$query == "Site") final.vec <- input$SITE.site
+    if (input$query == "Parameter") final.vec <- input$SITE.param
+    return(final.vec)
+  })
+  #----------------------------------------------------------------------------
+  sel.huc <- reactive({
+    if (input$query == "Site") final.vec <- input$HUC_8.site
+    if (input$query == "Parameter") final.vec <- input$HUC_8.param
+    return(final.vec)
+  })
   #==============================================================================
   # Upload data from postgres for the selected site.
   #==============================================================================
   param.tbl <- reactive({
-    wqt <- dbReadTable(pool, paste0("SITE_", input$SITE))
-  }) # End param.tbl
-  #==============================================================================
-  # Subset the data to only include the parameter of interest.
-  #==============================================================================
-  output$tbl <- renderTable({
-    # Prevent red error message from appearing while data is loading.
-    if(is.null(param.tbl())) return(NULL)
-    final.df <- param.tbl()
-    #final.df <- final.df[final.df$PARAMETER %in% input$PARAM, ]
-    final.df <- final.df[final.df$ICPRB_NAME %in% input$PARAM, ]
+    #wqt <- dbReadTable(pool, paste0("SITE_", input$SITE.site))
+    if (is.null(sel.site()) | sel.site() == "") return(NULL)
+    if (is.null(sel.param())) return(NULL)
+    wqt <- dbGetQuery(pool, paste(
+      "SELECT * FROM",  paste0('"site_', sel.site(), '"'),
+      'WHERE "ICPRB_NAME" =', paste0("'", sel.param(), "'")))
+    if (is.null(wqt)) return(NULL)
+    if ("ICPRB_VALUE" %in% names(wqt)) {
+      final.df <- wqt[!is.na(wqt$ICPRB_VALUE), ]
+    } else {
+      final.df <- NULL
+    }
+    #final.df$DATE <- as.Date(final.df$DATE, "%Y-%m-%d")
     return(final.df)
-  }) # End output$tbl
-  #==============================================================================
+  }) # End param.tbl
+
+  #============================================================================
+  # Subset the data to only include the parameter of interest.
+  #============================================================================
+  #   output$tbl <- renderTable({
+  # Prevent red error message from appearing while data is loading.
+  #    if(is.null(param.tbl())) return(NULL)
+  #    final.df <- param.tbl()
+  #final.df <- final.df[final.df$PARAMETER %in% input$PARAM.site, ]
+  #    final.df <- final.df[final.df$ICPRB_NAME %in% input$PARAM.site, ]
+  #    return(final.df)
+  #  }) # End output$tbl
+  #============================================================================
   # Update the list of parameters to reflect only the parameters observed at the
   #selected site.
-  #==============================================================================
+  #============================================================================
   param.react <- reactive({
-    # Prevent red error message from appearing while data is loading.
-    if (is.null(param.tbl())) return(NULL)
-    sites <- param.tbl()
-    final.df <- sites[sites$SITE %in% input$SITE, ]
-    #final.df <- wqt[wqt$SITE %in% input$SITE, ]
-    #final.vec <- unique(final.df$PARAMETER)
-    final.vec <- unique(final.df$ICPRB_NAME)
+    if (is.null(sel.site())) {
+      final.vec <- NULL
+    } else {
+      final.vec <- unlist(dbGetQuery(pool, paste(
+        'SELECT DISTINCT "ICPRB_NAME"',
+        "FROM", paste0('"SITE_', sel.site(), '"'))))
+    }
+    
     return(final.vec)
   }) # End param.react
-  #******************************************************************************
+  #============================================================================
+  # Import the gage information related to the selected values.
+  #============================================================================
+  sel.gage <- reactive({
+    if (is.null(param.tbl())){
+      final.vec <- NULL
+    } else {
+      final.vec <- unique(param.tbl()$GAGE_ID)
+    }
+    return(final.vec)
+  })
+  #----------------------------------------------------------------------------
+  gage.info.react <- reactive({
+    if (is.null(sel.gage())) return(NULL)
+    final.df <- dbGetQuery(pool, paste(
+      'SELECT * FROM "gage_info"',
+      'WHERE "GAGE_ID" =', paste0("'", sel.gage(), "'")))
+    if (nrow(final.df) == 0) final.df <- NULL
+    return(final.df)
+  }) # End param.react
+ 
+  #****************************************************************************
   # Sidebar Script
   # Dynamic reaction to changing the selected site.
-  #******************************************************************************
-  observeEvent(c(input$HUC_8), {
+  #****************************************************************************
+  #============================================================================
+  # If switching to Query by Paramter.
+  #============================================================================
+  observeEvent(sel.param(), {
+    updateSelectInput(session, "PARAM.param",
+                      choices = sort(unique(param.range$ICPRB_NAME)),
+                      selected = sel.param())
+  })
+  #----------------------------------------------------------------------------
+  observeEvent(c(sel.param(), input$query == "Parameter",
+                 sel.huc()), {
     # Prevent red error message from appearing while data is loading.
-    if(is.null(site.react())) return(NULL)
-    final.site <- site.react()
+    if(is.null(sel.param())) return(NULL)
+    unique.huc8 <- unique(huc8[huc8$ICPRB_NAME %in% sel.param(), "HUC_8"])
+    final.huc8 <- c("All HUCs", sort(unique.huc8))
+    
     # When a new HUC is selected, the sites are modified to reflect only the 
     # sites within the HUC. If the currently selected site was not in the newly
     # selected HUC, then the sites are sorted in alphabetical order and the first
     # site is  selected. However, if the currently selected site was in the newly
     # selected HUC, the sites are sorted in alphabetical order but the currently
     # selected site does not change.
-    if (input$SITE %in% final.site) {
-      select.this <- input$SITE
+    if (sel.huc() %in% final.huc8) {
+      select.this <- input$HUC_8.param
+    } else {
+      select.this <- final.huc8[1]
+    }
+
+    
+    observeEvent(c(sel.param()), {
+                   updateSelectInput(session, "HUC_8.param",
+                                     choices = final.huc8,
+                                     selected = select.this)
+                   })
+
+  })
+  #----------------------------------------------------------------------------
+  # Provide a dropdown menu with all of the available site selections.
+  # Filters according to the HUC8 selected.
+  site.react.param <- reactive({
+    # Prevent red error message from appearing while data is loading.
+    if (is.null(sel.huc())) {
+      return(NULL)
+    }   
+    
+    if (sel.huc() %in% "All HUCs") {
+      final.vec <- sort(unique(huc8[huc8$ICPRB_NAME %in% sel.param(), "SITE"]))
+    } else {
+      final.vec <- sort(unique(huc8[huc8$HUC_8 %in% sel.huc() &
+                                      huc8$ICPRB_NAME %in% sel.param(), "SITE"]))
+    }
+    
+    return(final.vec)
+  }) # End site.react.site
+  #----------------------------------------------------------------------------
+  observeEvent(c(sel.huc(), sel.param()), {
+    # Prevent red error message from appearing while data is loading.
+    if(is.null(site.react.param())) return(NULL)
+    final.site <- site.react.param()
+    # When a new HUC is selected, the sites are modified to reflect only the 
+    # sites within the HUC. If the currently selected site was not in the newly
+    # selected HUC, then the sites are sorted in alphabetical order and the first
+    # site is  selected. However, if the currently selected site was in the newly
+    # selected HUC, the sites are sorted in alphabetical order but the currently
+    # selected site does not change.
+    if (sel.site() %in% final.site) {
+      select.this <- sel.site()
     } else {
       select.this <- final.site[1]
     }
@@ -89,12 +185,75 @@ shinyServer(function(input, output, session) {
     # The sites in the dropdown menu will only represent the sites within the
     # selected HUC.
     #==========================================================================
-    updateSelectInput(session, "SITE",
+    updateSelectInput(session, "SITE.param",
                       choices = as.character(final.site),
                       selected = select.this)
-  }) # End observeEvent(c(input$HUC_8)
+  }) # End observeEvent(c(input$HUC_8.site)
+  #----------------------------------------------------------------------------
   #============================================================================
-  observeEvent(c(input$SITE), {
+  # Query by Site
+  #============================================================================
+  # If switching to Query by Site.
+#  observeEvent(sel.param(), {
+#    updateSelectInput(session, "PARAM.site",
+#                      choices = sort(unique(param.range$ICPRB_NAME)),
+#                      selected = input$PARAM.param)
+#  })
+  #----------------------------------------------------------------------------
+  observeEvent(c(sel.huc(), sel.param()), {
+    updateSelectInput(session, "HUC_8.site",
+                      choices = c("All HUCs", sort(unique(huc8$HUC_8))),
+                      selected = sel.huc())
+  })
+  #----------------------------------------------------------------------------
+#  observeEvent(sel.site(), {
+#    updateSelectInput(session, "SITE.site",
+#                      choices = input$SITE.param,
+#                      selected = input$SITE.param)
+#  })
+  #----------------------------------------------------------------------------
+  # Provide a dropdown menu with all of the available site selections.
+  # Filters according to the HUC8 selected.
+  site.react.site <- reactive({
+    # Prevent red error message from appearing while data is loading.
+    if (is.null(sel.huc())) {
+      return(NULL)
+    }   
+    if (sel.huc() %in% "All HUCs") {
+      final.vec <- sort(unique(huc8$SITE))
+    } else {
+      final.vec <- sort(unique(huc8[huc8$HUC_8 %in% sel.huc(), "SITE"]))
+    }
+    
+    return(final.vec)
+  }) # End site.react.site
+  #----------------------------------------------------------------------------
+  observeEvent(c(sel.huc(), sel.site()), {
+    # Prevent red error message from appearing while data is loading.
+    if(is.null(site.react.site())) return(NULL)
+    final.site <- site.react.site()
+    # When a new HUC is selected, the sites are modified to reflect only the 
+    # sites within the HUC. If the currently selected site was not in the newly
+    # selected HUC, then the sites are sorted in alphabetical order and the first
+    # site is  selected. However, if the currently selected site was in the newly
+    # selected HUC, the sites are sorted in alphabetical order but the currently
+    # selected site does not change.
+    if (sel.site() %in% final.site) {
+      select.this <- sel.site()
+    } else {
+      select.this <- final.site[1]
+    }
+    #==========================================================================
+    # The sites in the dropdown menu will only represent the sites within the
+    # selected HUC.
+    #==========================================================================
+    updateSelectInput(session, "SITE.site",
+                      choices = as.character(final.site),
+                      selected = select.this)
+  }) # End observeEvent(c(input$HUC_8.site)
+
+
+  observeEvent(c(sel.site(), sel.param()), {
     # Prevent red error message from appearing while data is loading.
     if(is.null(param.react())) return(NULL)
     sub.param <- param.react()
@@ -108,8 +267,8 @@ shinyServer(function(input, output, session) {
     # selected. However, if the currently selected parameter was also measured
     # at the newly selected site, the parametes are sorted in alphabetical order
     # but the currently selected parameter does not change.
-    if (input$PARAM %in% final.param) {
-      select.this <- input$PARAM
+    if (sel.param() %in% final.param) {
+      select.this <- sel.param()
     } else {
       select.this <- final.param[1]
     }
@@ -117,9 +276,17 @@ shinyServer(function(input, output, session) {
     # The parameters in the dropdown menu only represent parameters measured
     # at the selected site.
     #=============================================================================
-    updateSelectInput(session, "PARAM",
+    updateSelectInput(session, "PARAM.site",
                       choices = as.character(final.param),
                       selected = select.this)
+  })
+  #----------------------------------------------------------------------------
+  observeEvent(sel.site(), {
+    # Prevent red error message from appearing while data is loading.
+    if(is.null(param.react())) return(NULL)
+    sub.param <- param.react()
+    
+    final.param <- unique(sort(as.character(sub.param)))
     #============================================================================= 
     # A count of how many outliers were removed from the data used to create the figures.
     # The outliers will still appear in the "Data" tab.
@@ -128,9 +295,9 @@ shinyServer(function(input, output, session) {
       # Prevent red error message from appearing while data is loading.
       if(is.null(param.tbl())) return(NULL)
       #============================================================================
-      #sub.param <- param.tbl()[param.tbl()$SITE %in% input$SITE & param.tbl()$PARAMETER %in% input$PARAM, ]
-      sub.param <- param.tbl()[param.tbl()$SITE %in% input$SITE & param.tbl()$ICPRB_NAME %in% input$PARAM, ]
-      sub.outliers <- outliers[outliers$PARAMETER %in% input$PARAM, ]
+      #sub.param <- param.tbl()[param.tbl()$SITE %in% input$SITE.site & param.tbl()$PARAMETER %in% input$PARAM.site, ]
+      sub.param <- param.tbl()[param.tbl()$SITE %in% sel.site() & param.tbl()$ICPRB_NAME %in% sel.param(), ]
+      sub.outliers <- outliers[outliers$PARAMETER %in% sel.param(), ]
       #============================================================================
       outlier.count <- nrow(sub.param[sub.param$REPORTED_VALUE >= sub.outliers$UP_FENCE_4.5 |
                                         sub.param$REPORTED_VALUE <= sub.outliers$LOW_FENCE_4.5, ])
@@ -144,9 +311,9 @@ shinyServer(function(input, output, session) {
       # Prevent red error message from appearing while data is loading.
       if(is.null(param.tbl())) return(NULL)
       #============================================================================
-      #sub.param <- param.tbl()[param.tbl()$SITE %in% input$SITE & param.tbl()$PARAMETER %in% input$PARAM, ]
-      sub.param <- param.tbl()[param.tbl()$SITE %in% input$SITE & 
-                                 param.tbl()$ICPRB_NAME %in% input$PARAM, ]
+      #sub.param <- param.tbl()[param.tbl()$SITE %in% input$SITE.site & param.tbl()$PARAMETER %in% input$PARAM.site, ]
+      sub.param <- param.tbl()[param.tbl()$SITE %in% sel.site() & 
+                                 param.tbl()$ICPRB_NAME %in% sel.param(), ]
       sub.censored <- sub.param[sub.param$CENSORED %in% "Censored", ]
       #sub.censored <- sub.param[!is.na(sub.param$ResultDetectionConditionText) &
       #                             !sub.param$ResultDetectionConditionText %in% "", ]
@@ -187,17 +354,24 @@ shinyServer(function(input, output, session) {
     #--------------------------------------------------------------------------
     output$FIRST_DATE <- renderUI({
       # Prevent red error message from appearing while data is loading.
-      if(is.null(param.tbl())) return(NULL)
-      min.date <- min(param.tbl()$DATE)
-      min.date <- format(min.date, "%m/%d/%Y")
+      if(is.null(param.tbl())) {
+        min.date <- NULL
+      } else {
+        min.date <- min(param.tbl()$DATE, na.rm = TRUE)
+        min.date <- format(min.date, "%m/%d/%Y")
+      }
       HTML(paste("<strong>First Date:</strong>", min.date, sep = " "))
     }) # End output$FIRST_DATE
     #--------------------------------------------------------------------------
     output$LAST_DATE <- renderUI({
       # Prevent red error message from appearing while data is loading.
-      if(is.null(param.tbl())) return(NULL)
-      max.date <- max(param.tbl()$DATE)
-      max.date <- format(max.date, "%m/%d/%Y")
+      if(is.null(param.tbl())) {
+        max.date <- NULL
+      } else {
+        max.date <- max(param.tbl()$DATE, na.rm = TRUE)
+        max.date <- format(max.date, "%m/%d/%Y")
+      }
+      
       HTML(paste("<strong>Last Date:</strong>", max.date, sep = " "))
     }) # End output$LAST_DATE
     #--------------------------------------------------------------------------
@@ -227,46 +401,62 @@ shinyServer(function(input, output, session) {
     }) # End output$REPLICATE
     #--------------------------------------------------------------------------
     output$COMPOSITE <- renderUI({
-      uni.list <- uni.func(param.tbl()$COMPOSITE)
+      comp.vec <- c("Samples are collected as a grab",
+                   "Samples collected continuously")
+      uni.list <- uni.func(param.tbl()$COMPOSITE_METHOD)
+      uni.list <- ifelse(any(comp.vec %in% uni.list), "Present", "Absent")
       HTML(paste("<strong>Composite:</strong>", uni.list, sep = " "))
     }) # End output$COMPOSITE
     #--------------------------------------------------------------------------
     output$GAGE <- renderUI({
-      uni.list <- uni.func(param.tbl()$GAGE)
+      uni.list <- uni.func(param.tbl()$GAGE_ID)
       HTML(paste("<strong>Flow Gage:</strong>", uni.list, sep = " "))
     }) # End output$GAGE
     #--------------------------------------------------------------------------
     output$GAGE.AGENCY <- renderUI({
-      HTML(paste("<strong>Agency:</strong>", "USGS", sep = " "))
+      if (is.null(gage.info.react())) {
+        uni.list <- "<em>Blank</em>"
+      } else {
+        uni.list <- "USGS"
+      }
+      HTML(paste("<strong>Agency:</strong>", uni.list, sep = " "))
     }) # End output$GAGE.AGENCY
     #--------------------------------------------------------------------------
     output$GAGE.LOC <- renderUI({
-      uni.list <- uni.func(param.tbl()$GAGE_LOCATION)
+      if (is.null(gage.info.react())) {
+        uni.list <- "<em>Blank</em>"
+      } else {
+        uni.list <- uni.func(gage.info.react()$GAGE_NAME)
+      }
       HTML(paste("<strong>Flow Gage Location:</strong>", uni.list, sep = " "))
     })# End output$GAGE.LOC
     #--------------------------------------------------------------------------
     output$GAGE.LAT <- renderUI({
-      uni.list <- uni.func(param.tbl()$LAT_DD)
+      if (is.null(gage.info.react())) {
+        uni.list <- "<em>Blank</em>"
+      } else {
+        uni.list <- uni.func(gage.info.react()$LAT_DD)
+      }
       HTML(paste("<strong>Latitude:</strong>", uni.list, sep = " "))
     }) # End ouput$GAGE.LAT
     #--------------------------------------------------------------------------
     output$GAGE.LONG <- renderUI({
-      uni.list <- uni.func(param.tbl()$LONG_DD)
+      if (is.null(gage.info.react())) {
+        uni.list <- "<em>Blank</em>"
+      } else {
+        uni.list <- uni.func(gage.info.react()$LONG_DD)
+      }
       HTML(paste("<strong>Longitude:</strong>", uni.list, sep = " "))
     }) # End output$GAGE.LONG
-  }) # End observeEvent(c(input$SITE)
+  }) # End observeEvent(c(input$SITE.site)
   #******************************************************************************
   # Tab Figures Script (Tab 1)
   #******************************************************************************
   prep.react <- reactive({
-    if(is.null(input$SITE)) return(NULL)
-    site.char <- as.character(unique(input$SITE)[1])
-    if(is.null(input$PARAM)) return(NULL)
-    param.char <- as.character(unique(input$PARAM)[1])
     # Prevent red error message from appearing while data is loading.
     if(is.null(param.tbl())) return(NULL)
     # Prep data when data is available
-    final.df <- prep_plot(param.tbl(), site.char, param.char, outliers)
+    final.df <- prep_plot(param.tbl(), sel.site(), sel.param(), outliers)
     # Remove NAs from the REPORTING_VALUE column.
     # final.df <- final.df[complete.cases(final.df$REPORTED_VALUE), ]
     # End prep.react reactive function.
@@ -304,7 +494,7 @@ shinyServer(function(input, output, session) {
   #============================================================================
   output$plots.download <- downloadHandler(
     filename = function(){
-      paste0(paste("WQT", input$SITE, input$PARAM, sep = "_"), "_",
+      paste0(paste("WQT", sel.site(), sel.param(), sep = "_"), "_",
              Sys.Date(), ".png")
     },
     content = function(file) {
@@ -332,47 +522,44 @@ shinyServer(function(input, output, session) {
     # Prevent red error message from appearing while data is loading.
     if(is.null(param.tbl())) return(NULL)
     sites <- param.tbl()
-    #final.df <- wqt[wqt$SITE %in% input$SITE, ]
-    final.df <- sites[sites$SITE %in% input$SITE, ]
-    #final.df <- unique(final.df[final.df$PARAMETER %in% input$PARAM, ])
-    final.df <- unique(final.df[final.df$ICPRB_NAME %in% input$PARAM, ])
-    final.df <- final.df[order(final.df$DATE), ]
+    #final.df <- wqt[wqt$SITE %in% input$SITE.site, ]
+    #final.df <- sites[sites$SITE %in% input$SITE.site, ]
+    #final.df <- unique(final.df[final.df$PARAMETER %in% input$PARAM.site, ])
+    #final.df <- unique(final.df[final.df$ICPRB_NAME %in% input$PARAM.site, ])
+    final.df <- sites[order(sites$DATE), ]
     return(final.df)
   }) # End input.react
   #============================================================================= 
-  # Generate a table representing the selected Site and Parameter.
-  output$param_table <- DT::renderDataTable({
-    sel.param <- input$PARAM
-    
-    if (is.null(sel.param)) return(NULL)
-    
+  # Create the DataTable.
+  dt.react <- reactive({
+    if (is.null(sel.param())) return(NULL)
     # Prevent red error message from appearing while data is loading.
     if(is.null(input.react())) return(NULL)
     
-    datatable(input.react(), options = list(
-      scrollX = 2000, 
-      scrollY = 700,
-      autoWidth = TRUE,
-      
-      columnDefs = list(list(width = '300px', targets = c(4, 65)),
-                        
-                        list(className = 'dt-center', targets = 1:ncol(input.react()))),
-      
-      #list(list(width = '2000px', targets = "AGENCY_NAME"))
-      #),
-      pageLength = 10,
-      #paging = FALSE,
-      color = "black")) %>%
+    final.dt <- datatable(input.react(),
+                          options = list(
+                            scrollX = 2000, 
+                            scrollY = 700,
+                            autoWidth = TRUE,
+                            columnDefs = list(list(width = '300px',
+                                                   targets = c(4, 65)),
+                                              list(className = 'dt-center',
+                                                   targets = 1:ncol(input.react()))),
+                            pageLength = 25,
+                            color = "black")) %>%
       formatDate(columns = "DATE", method = 'toLocaleDateString')
     
-  }, options = list(paging = TRUE, color = "black")) # End output$param_table
-  
+    return(final.dt)
+  })
+  #---------------------------------------------------------------------------- 
+  # Render a table representing the selected Site and Parameter.
+  output$param_table <- DT::renderDataTable(dt.react()) # End output$param_table
   #============================================================================
   # Download the data table as a csv.
   #============================================================================
   output$param.tbl.download <- downloadHandler(
     filename = function() {
-      paste0(paste("WQT", input$SITE, input$PARAM, sep = "_"), "_",
+      paste0(paste("WQT", sel.site(), sel.param(), sep = "_"), "_",
              Sys.Date(), ".csv")
     },
     content = function(con) {
@@ -384,32 +571,45 @@ shinyServer(function(input, output, session) {
   # Tab Maps Script (Tab 3)
   #****************************************************************************
   # Exract Lat/Long of selected site for plotting.
-  points <- eventReactive(input$SITE, {
+  points <- eventReactive(input$SITE.site, {
     # Prevent red error message from appearing while data is loading.
     if(is.null(param.tbl())) return(NULL)
     
     sites <- param.tbl()
-    sites[sites$SITE %in% input$SITE, c("SITE", "LATITUDE", "LONGITUDE")]
+    final.df <- sites[, c("SITE", "LATITUDE", "LONGITUDE",
+                          "ProviderName", "SITE_NAME_EDIT")]
+    names(final.df)[4:5] <- c("PROVIDER", "SITE_NAME")
+    final.df$GAGE <- FALSE
+    return(final.df)
   }, ignoreNULL = FALSE) # End points
   #----------------------------------------------------------------------------
   # Exract Lat/Long of selected site for plotting.
-  points.gage <- eventReactive(input$SITE, {
+  points.gage <- eventReactive(sel.site(), {
     # Prevent red error message from appearing while data is loading.
-    if(is.null(param.tbl())) return(NULL)
+    if(is.null(gage.info.react())) return(NULL)
     
-    sites <- param.tbl()
-    sites <- sites[sites$SITE %in% input$SITE, c("LAT_DD", "LONG_DD")]
-    final.df <- data.frame(lapply(sites, as.numeric))
+    sites <- gage.info.react()
+    final.df <- sites[, c("GAGE_ID", "LAT_DD", "LONG_DD", "GAGE_NAME")]
+    names(final.df) <- c("SITE", "LATITUDE", "LONGITUDE", "SITE_NAME")
+    final.df$PROVIDER <- "USGS"
+    final.df[, 2:3] <- sapply(final.df[, 2:3], as.numeric)
+    final.df$GAGE <- TRUE
     return(final.df)
   }, ignoreNULL = FALSE) # End points.gage
   #============================================================================ 
   # Plot the Site on the map.
   output$mymap <- renderLeaflet({
+    map.df <- rbind(points(), points.gage())
+    map.df$LATITUDE <- jitter(map.df$LATITUDE, factor = 0.000001)
+    map.df$LONGITUDE <- jitter(map.df$LONGITUDE, factor = 0.000001)
     longitude <- mean(as.numeric(points()$LONGITUDE), na.rm = TRUE)
     latitude <- mean(as.numeric(points()$LATITUDE), na.rm = TRUE)
     #long.gage <- mean(points.gage()$LONG_DD, na.rm = TRUE)
     #lat.gage <- mean(points.gage()$LAT_DD, na.rm = TRUE)
     icprb.map <- "https://api.mapbox.com/styles/v1/skaisericprb/cizok18ny00302spia5zhre3o/tiles/256/{z}/{x}/{y}?access_token=pk.eyJ1Ijoic2thaXNlcmljcHJiIiwiYSI6ImNpa2U3cGN1dDAwMnl1cm0yMW94bWNxbDEifQ.pEG_X7fqCAowSN8Xr6rX8g"
+    
+    
+    pal <- colorFactor(c("#E69F00", "#0072B2"), domain = c(FALSE, TRUE))
     
     leaflet() %>%
       #addTiles() %>%
@@ -420,27 +620,26 @@ shinyServer(function(input, output, session) {
       
       #addProviderTiles("Hydda.Full",
       #                 options = providerTileOptions(noWrap = TRUE)) %>%
-      addCircleMarkers(#data = points()[, c("LATITUDE", "LONGITUDE")],
-        lng = longitude, lat = latitude,
-        fillColor = "#E69F00",
-        stroke = FALSE,
-        color = "black",
-        weight = 3,
-        fillOpacity = 0.5,
-        #label = points()$SITE,
-        popup = paste("<strong>Site:</strong>", points()$SITE)) %>%
-      #addCircleMarkers(lng = points.gage()$LONG_DD, lat = points.gage()$LAT_DD,
-      #                 fillColor = "#0072B2",
-      #                 stroke = FALSE,
-      #                 color = "black",
-      #                 weight = 3,
-      #                 fillOpacity = 0.5) %>%
-      
+    addCircleMarkers(
+      data = map.df[, c("LATITUDE", "LONGITUDE")],
+      #lng = longitude, lat = latitude,
+      fillColor = ~pal(map.df$GAGE),
+      fill = TRUE,
+      stroke = FALSE,
+      #color = ~pal(map.df$GAGE),
+      weight = 3,
+      fillOpacity = 0.5,
+      popup = paste("<strong>Site:</strong>", map.df$SITE, "<br/>",
+                    "<strong>Data Provider:</strong>", map.df$PROVIDER, "<br/>",
+                    "<strong>Latitude:</strong>", map.df$LATITUDE, "<br/>",
+                    "<strong>Longitude:</strong>", map.df$LONGITUDE, "<br/>",
+                    "<strong>Site Description:</strong>", map.df$SITE_NAME)) %>%
       addLegend(position = "topright",
                 title = "Legend",
                 labels = c("Site", "Flow Gage"),
                 colors = c("#E69F00", "#0072B2"),
                 opacity = 1)
+      
     #addMarkers(data = points.gage(), lng = long.gage, lat = lat.gage)
   }) # End output$MAP
   #----------------------------------------------------------------------------
@@ -456,7 +655,7 @@ shinyServer(function(input, output, session) {
     }
   ) # End output$pdflink
   #----------------------------------------------------------------------------
-  observeEvent(c(input$SITE, input$PARAM), {
+  observeEvent(c(input$SITE.site, input$PARAM.site), {
     # Prevent red error message from appearing while data is loading.
     if(is.null(param.react())) return(NULL)
     sub.param <- param.react()
@@ -470,8 +669,8 @@ shinyServer(function(input, output, session) {
     # selected. However, if the currently selected parameter was also measured
     # at the newly selected site, the parametes are sorted in alphabetical order
     # but the currently selected parameter does not change.
-    if (input$PARAM %in% final.param) {
-      select.this <- input$PARAM
+    if (input$PARAM.site %in% final.param) {
+      select.this <- input$PARAM.site
     } else {
       select.this <- final.param[1]
     }
@@ -482,10 +681,10 @@ shinyServer(function(input, output, session) {
     #==========================================================================
     # Identifying Outliers Heading
     #==========================================================================
-    #sub.param <- param.tbl()[param.tbl()$SITE %in% input$SITE & param.tbl()$PARAMETER %in% input$PARAM, ]
-    sub.param <- param.tbl()[param.tbl()$SITE %in% input$SITE & 
-                               param.tbl()$ICPRB_NAME %in% input$PARAM, ]
-    sub.outliers <- outliers[outliers$PARAMETER %in% input$PARAM, ]
+    #sub.param <- param.tbl()[param.tbl()$SITE %in% input$SITE.site & param.tbl()$PARAMETER %in% input$PARAM.site, ]
+    sub.param <- param.tbl()[param.tbl()$SITE %in% input$SITE.site & 
+                               param.tbl()$ICPRB_NAME %in% input$PARAM.site, ]
+    sub.outliers <- outliers[outliers$PARAMETER %in% input$PARAM.site, ]
     #--------------------------------------------------------------------------
     outlier.count <- nrow(sub.param[sub.param$REPORTED_VALUE >= sub.outliers$UP_FENCE_4.5 |
                                       sub.param$REPORTED_VALUE <= sub.outliers$LOW_FENCE_4.5, ])

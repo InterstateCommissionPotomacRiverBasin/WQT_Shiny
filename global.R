@@ -6,25 +6,32 @@
 # Updated: 2/28/17
 #==============================================================================
 #==============================================================================
-library(RPostgreSQL)
+#library(RPostgreSQL)
+library(DBI)
 library(pool)
 #==============================================================================
 pool <- dbPool("PostgreSQL",
                dbname = "WQT_May",
-               #host = "192.168.1.214",
                host = "localhost",
-               user = "guest",
-               password = "guest",
+               user = "guest2",
+              password = "guest",
                port = 5432
 )
-
+#pool <- dbPool("PostgreSQL",
+#               dbname = "icprbcoo_wqt",
+#               #host = "192.168.1.214",
+#               host = "icprbcoop.org",
+#               user = "icprbcoo_guest",
+#               password = "guest",
+#               port = 5432
+#)
 #------------------------------------------------------------------------------
 # Import tables necessary for app.
 param.range <- dbReadTable(pool, "param_range")
 outliers <- dbReadTable(pool, "Outliers")
 huc8 <- dbReadTable(pool, "huc_8")
 list.huc <- c("All HUCs", sort(unique(huc8$HUC_8)))
-sites <- huc8[order(huc8$SITE), ]$SITE
+sites <- unique(huc8[order(huc8$SITE), ]$SITE)
 #------------------------------------------------------------------------------
 # OLD??????????????
 #sites <- dbGetQuery(conn, paste("SELECT table_name
@@ -150,7 +157,7 @@ param_range <- function(site){
 }
 #==============================================================================
 raw_loess_plot <- function(plot.me){
-  
+  plot.me$CENSORED <- factor(plot.me$CENSORED, levels = c("Uncensored", "Censored"))
   final.plot <- ggplot2::ggplot(plot.me, aes(x = DATE,
                                              #ggplot2::ggplot(plot.me, aes(x = DATE,
                                              y = REPORTED_VALUE,
@@ -158,8 +165,9 @@ raw_loess_plot <- function(plot.me){
     
     #geom_line(color = "#56B4E9", size = 1)  + # "royalblue3"
     #geom_point(color = "#56B4E9", size = 2, na.rm = TRUE) +
-    geom_point(color = "black", pch = 21, size = 3, na.rm = TRUE, alpha = 0.6) +
-    scale_fill_manual(values = c("#56B4E9", "#009E73"), drop = FALSE) +
+    geom_point(color = "black", aes(shape = CENSORED), size = 3, na.rm = TRUE, alpha = 0.6) +
+    scale_fill_manual(values = c("#56B4E9", "#580058"), drop = FALSE) + # "#009E73"
+    scale_shape_manual(values = c(21, 22), drop = FALSE) +
     #geom_point(size = 2, na.rm = TRUE) +
     stat_smooth(method = 'loess', fill = "#999999", color = "#E69F00",
                 size = 1.2, na.rm = TRUE, show.legend = FALSE) +
@@ -300,22 +308,13 @@ tile_plot <- function(plot.me, param.range){
          #                      unique((plot.me$ICPRB_UNITS)), sep = " "),
          x = "Year",
          y = "Month") +
-    geom_tile(aes(fill = as.numeric(REPORTED_VALUE)), colour = "white") +
+    geom_tile(aes(fill = as.numeric(REPORTED_VALUE),
+                  color = as.numeric(REPORTED_VALUE)), colour = "white") +
     geom_text(aes(label = ifelse(is.na(as.character(REPORTED_VALUE)) | 
                                    REPORTED_VALUE %in% "NA", "", REPORTED_VALUE)),
               #sprintf("%s", as.character(REPORTED_VALUE)))),
               size = 3) +
-    
-    scale_fill_gradientn(#colours = cbPalette,
-      colours = c("#56B4E9", "#E69F00"),
-      breaks = c(param.range$MIN - 0.001,  param.range$MAX),
-      #breaks = c(param.range$'05th',  param.range$'95th'),
-      labels = c(param.range$MIN,  param.range$MAX),
-      limits = c(param.range$MIN - 0.001,  param.range$MAX),
-      guide = "colorbar",
-      na.value = "white"#,
-      #label = ""
-    ) +
+
     guides(color = guide_legend(label.position = "bottom")) +
     theme(plot.title = element_text(hjust = 0.5, size = 12),
           plot.subtitle = element_text(hjust = 0.5, size = 11),
@@ -345,37 +344,134 @@ tile_plot <- function(plot.me, param.range){
           panel.background = element_blank(),
           plot.margin = unit(c(10, 0, 5, 0), "mm")
     ) 
-  
+  #----------------------------------------------------------------------------
+  if ("DO" %in% plot.me$ICPRB_NAME) {
+    final.plot <- final.plot +
+      scale_fill_gradientn(colors = c("tomato3",  "#E69F00",
+                                      "#56B4E9", "#56B4E9", "#E69F00",
+                                      "tomato3"),
+                           breaks = c(1.99, 2, 8,
+                                      20, 25, 25.01),
+                           limits = c(1, 26),
+                           values = scales::rescale(c(1.99, 2, 8,
+                                                      20, 25, 25.01)),
+                           labels = c("",  2, 8,
+                                      20, 25, ""),
+                           guide = "colorbar",
+                           na.value = "white", oob = scales::squish)  +
+      guides(fill = guide_colorbar(ticks = FALSE))
+  }
+  #----------------------------------------------------------------------------
   if ("PH" %in% plot.me$ICPRB_NAME) {
+#    final.plot <- final.plot +
+#      scale_fill_gradient2(midpoint = 7, limits = c(5, 9),
+#                           low = "#E69F00", mid = "#56B4E9",
+#                           high = "#E69F00", na.value = "white")
     final.plot <- final.plot +
-      scale_fill_gradient2(midpoint = 7, limits = c(5, 9),
-                           low = "#E69F00", mid = "#56B4E9", high = "#E69F00", na.value = "white")
+      scale_fill_gradientn(colors = c("tomato3",  "#E69F00",
+                                      "#56B4E9", "#E69F00",
+                                      "tomato3"),
+                           breaks = c(4.99, 5, 7,
+                                      9, 9.01),
+                           limits = c(4, 10),
+                           values = scales::rescale(c(4.99, 5, 7,
+                                                      9, 9.01)),
+                           labels = c("", 5, 7, 9, ""),
+                           guide = "colorbar",
+                           na.value = "white", 
+                           oob = scales::squish) +
+      guides(fill = guide_colorbar(ticks = FALSE))
   }
-  
+  #----------------------------------------------------------------------------
   if ("TALK" %in% plot.me$ICPRB_NAME) {
+#    final.plot <- final.plot +
+#      scale_fill_gradient2(midpoint = 100, limits = c(0, 250),
+#                           low = "#E69F00", mid = "#56B4E9",
+#                           high = "#E69F00", na.value = "white")
     final.plot <- final.plot +
-      scale_fill_gradient2(midpoint = 100, limits = c(0, 250),
-                           low = "#E69F00", mid = "#56B4E9", high = "#E69F00", na.value = "white")
+      scale_fill_gradientn(colors = c("#E69F00", "#56B4E9", "#E69F00", "tomato3"),
+                           breaks = c(0, 100, 250, 250.01),
+                           limits = c(0, 260),
+                           values = scales::rescale(c(0, 100, 250, 250.01)),
+                           labels = c(0, 100, 250, ""),
+                           guide = "colorbar",
+                           na.value = "white",
+                           oob = scales::squish) +
+      guides(fill = guide_colorbar(ticks = FALSE))
   }
-  
-  if (nrow(bad.plot) > 0){
+  #----------------------------------------------------------------------------
+  if ("HARDNESS" %in% plot.me$ICPRB_NAME) {
     final.plot <- final.plot +
-      geom_point(data = bad.plot, aes(x = YEAR, y = MONTH, 
-                                      #width=0.9, height=0.9
-                                      color = OUTLIER), 
-                 
-                 #fill = "tomato3",
-                 size = 12,
-                 pch = 18,
-                 show.legend = TRUE) +
-      guides(colour = guide_legend(label.position = "bottom", override.aes = list(size = 8.2),
-                                   hjust = 0.5)) +
-      #guides(color = guide_legend(label.position = "bottom")) +
-      scale_color_manual(label = "Outlier", values = "tomato3") +
-      geom_text(aes(label = ifelse(is.na(as.character(REPORTED_VALUE)) | 
-                                     REPORTED_VALUE %in% "NA", "", REPORTED_VALUE)), size = 3)
+      scale_fill_gradientn(colors = c("#E69F00", "#56B4E9", "#E69F00", "tomato3"),
+                           breaks = c(0, 100, 250, 250.01),
+                           limits = c(0, 260),
+                           values = scales::rescale(c(0, 100, 250, 250.01)),
+                           labels = c(0, 100, 250, ""),
+                           guide = "colorbar",
+                           na.value = "white",
+                           oob = scales::squish) +
+      guides(fill = guide_colorbar(ticks = FALSE))
   }
-  
+  #----------------------------------------------------------------------------
+  if ("TEMP" %in% plot.me$ICPRB_NAME) {
+    final.plot <- final.plot +
+      scale_fill_gradientn(colors = c("tomato3", "#56B4E9", "#E69F00", "tomato3", "tomato3"),
+                           breaks = c( -0.01, 0, 29, 29.01, 30),
+                           limits = c(-2, 31),
+                           values = scales::rescale(c(0, 0.1, 29, 29.01,  30)),
+                           labels = c( "", 0, 29, "", ""),
+                           guide = "colorbar",
+                           na.value = "white",
+                           oob = scales::squish) +
+      guides(fill = guide_colorbar(ticks = FALSE))
+  }
+  #----------------------------------------------------------------------------
+  if ("SPCOND" %in% plot.me$ICPRB_NAME) {
+    final.plot <- final.plot +
+      scale_fill_gradientn(colors = c("#56B4E9", "#E69F00", "tomato3", "tomato3"),
+                           breaks = c(0, 750, 750.01, 760),
+                           limits = c(0, 750),
+                           values = scales::rescale(c(0, 750, 750.01, 751)),
+                           labels = c(0, 750, "", ""),
+                           #guide = FALSE,
+                           na.value = "white",
+                           oob = scales::squish) +
+      guides(fill = guide_colorbar(ticks = FALSE))
+
+  }
+  #----------------------------------------------------------------------------
+  if (!unique(plot.me$ICPRB_NAME) %in% c("DO", "PH", "TALK", "HARDNESS",
+                                         "TEMP", "SPCOND")) {
+    final.plot <- final.plot +
+      scale_fill_gradientn(#colours = cbPalette,
+        colours = c("#56B4E9", "#E69F00"),
+        breaks = c(param.range$MIN - 0.001,  param.range$MAX),
+        #breaks = c(param.range$'05th',  param.range$'95th'),
+        labels = c(param.range$MIN,  param.range$MAX),
+        limits = c(param.range$MIN - 0.001,  param.range$MAX),
+        guide = "colorbar",
+        na.value = "white"#,
+        #label = ""
+      ) +
+      guides(fill = guide_colorbar(ticks = FALSE))
+  }
+    #----------------------------------------------------------------------------
+#  if (nrow(bad.plot) > 0){
+#    final.plot <- final.plot +
+#      geom_point(data = bad.plot, aes(x = YEAR, y = MONTH, 
+#                                      #width=0.9, height=0.9
+#                                      color = OUTLIER), 
+#                 size = 12,
+#                 pch = 18,
+#                 show.legend = TRUE) +
+#      guides(colour = guide_legend(label.position = "bottom", override.aes = list(size = 8.2),
+#                                   hjust = 0.5)) +
+#      #guides(color = guide_legend(label.position = "bottom")) +
+#      scale_color_manual(label = "Outlier", values = "tomato3") +
+#      geom_text(aes(label = ifelse(is.na(as.character(REPORTED_VALUE)) | 
+#                                     REPORTED_VALUE %in% "NA", "", REPORTED_VALUE)), size = 3)
+#  }
+  #----------------------------------------------------------------------------
   return(final.plot)
 }
 #==============================================================================
