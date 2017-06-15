@@ -65,8 +65,10 @@ observeEvent(sel.site(), {
     # Prevent red error message from appearing while data is loading.
     if(is.null(param.tbl())) return(NULL)
     #agency <- unique(param.tbl()$AGENCY.x)
-    agency <- unique(param.tbl()$AGENCY)
-    HTML(paste("<strong>Agency:</strong>", agency, sep = " "))
+    #agency <- unique(param.tbl()$AGENCY)
+    #HTML(paste("<strong>Agency:</strong>", agency, sep = " "))
+    uni.list <- uni.func(param.tbl()$AGENCY)
+    HTML(paste("<strong>Agency:</strong>", uni.list, sep = " "))
   }) # End output$AGENCY
   #--------------------------------------------------------------------------
   output$FIRST_DATE <- renderUI({
@@ -108,7 +110,10 @@ observeEvent(sel.site(), {
   }) # End output$LONG
   #--------------------------------------------------------------------------
   output$DEPTH <- renderUI({
-    uni.list <- uni.func(param.tbl()$DEPTH)
+    sub.depth <- param.tbl() %>% 
+      filter(DEPTH <= 1 | is.na(DEPTH)) %>% 
+      .$DEPTH
+    uni.list <- uni.func(sub.depth)
     HTML(paste("<strong>Depth (m):</strong>", uni.list, sep = " "))
   }) # End output$DEPTH
   #--------------------------------------------------------------------------

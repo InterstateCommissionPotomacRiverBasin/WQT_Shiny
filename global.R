@@ -42,7 +42,7 @@ sites <- unique(huc8[order(huc8$SITE), ]$SITE)
 #==============================================================================
 
 #==============================================================================
-prep_plot <- function(long, site, param, outlier.table){
+prep_plot <- function(long, site, param, outlier.table, monthly.mean){
   #============================================================================
   # Prepare Date
   #============================================================================
@@ -79,18 +79,24 @@ prep_plot <- function(long, site, param, outlier.table){
   # Sequence Dates
   #============================================================================
   long$REPORTED_VALUE <- as.numeric(as.character(long$REPORTED_VALUE))
-  long <- long[, c("SITE", "MONTH", "YEAR", "ICPRB_NAME", #PARAMETER",
+  long <- long[, c("SITE", "MONTH", "YEAR", "ICPRB_NAME", "DEPTH",
                    "REPORTED_VALUE", "ICPRB_UNITS", "CENSORED")]
   long <- long[long$YEAR >= 1972, ]
-  # Use data.table functions to find the mean of reporting value. More than
-  # one value per month/year/parameter would cause this function to fail
-  # at a later stage.
-  long.df <- data.table::data.table(long)
-  plot.me <- long.df[, REPORTED_VALUE := mean(REPORTED_VALUE),
-                     by = list(SITE, MONTH, YEAR, #PARAMETER,
-                               ICPRB_NAME, ICPRB_UNITS, CENSORED)]
-  
-  
+  long <- long %>% 
+    filter(YEAR >= 1972,
+           DEPTH <= 1 | is.na(DEPTH))
+  if (monthly.mean == TRUE){
+    # Use data.table functions to find the mean of reporting value. More than
+    # one value per month/year/parameter would cause this function to fail
+    # at a later stage.
+    long.df <- data.table::data.table(long)
+    plot.me <- long.df[, REPORTED_VALUE := mean(REPORTED_VALUE),
+                       by = list(SITE, MONTH, YEAR, #PARAMETER,
+                                 ICPRB_NAME, ICPRB_UNITS, CENSORED)]
+  } else {
+    plot.me <- long
+  }
+
   plot.me$DATE <- as.Date(paste(plot.me$YEAR, plot.me$MONTH, 01, sep = "-"),
                           format = "%Y-%m-%d")
   #========================================================================
@@ -204,20 +210,40 @@ raw_loess_plot <- function(plot.me){
   return(final.plot)
 }
 #==============================================================================
-flow_correct_loess_plot <- function(plot.me){
-  final.plot <- ggplot2::ggplot(plot.me, aes(x = DATE, y = REPORTED_VALUE)) + 
-    labs(x = "Date",
-         y = paste(unique(plot.me$ICPRB_NAME),
-                   " (", unique(plot.me$ICPRB_UNITS), ")", sep = ""),
-         size = 12) +
+flow_correct_loess_plot <- function(plot.me, gage.df){
+  plot.me <- dplyr::left_join(plot.me, gage.df, by = c("DATE")) 
+  plot.me <- plot.me %>% 
+    filter(!is.na(FLOW),
+           FLOW > 0,
+           REPORTED_VALUE > 0) %>% 
+    select(REPORTED_VALUE, FLOW, DATE, ICPRB_NAME, ICPRB_UNITS, CENSORED) %>% 
+    mutate(REPORTED_VALUE = log10(REPORTED_VALUE),
+           FLOW = log10(FLOW))
+  plot.me$RESIDUALS <- loess(REPORTED_VALUE ~ FLOW, plot.me)$residuals
+  plot.me$CENSORED <- factor(plot.me$CENSORED, levels = c("Uncensored", "Censored"))
+  
+  final.plot <- ggplot2::ggplot(plot.me, aes(x = DATE,
+                                             #ggplot2::ggplot(plot.me, aes(x = DATE,
+                                             y = RESIDUALS,
+                                             fill = CENSORED)) + 
+    
     #geom_line(color = "#56B4E9", size = 1)  + # "royalblue3"
-    geom_point(color = "#56B4E9", size = 2, na.rm = TRUE) +
-    stat_smooth(method = 'loess', color = "#E69F00", size = 1.2, na.rm = TRUE) +
+    #geom_point(color = "#56B4E9", size = 2, na.rm = TRUE) +
+    geom_point(color = "black", aes(shape = CENSORED), size = 3, na.rm = TRUE, alpha = 0.6) +
+    scale_fill_manual(values = c("#56B4E9", "#580058"), drop = FALSE) + # "#009E73"
+    scale_shape_manual(values = c(21, 22), drop = FALSE) +
+    #geom_point(size = 2, na.rm = TRUE) +
+    stat_smooth(method = 'loess', fill = "#999999", color = "#E69F00",
+                size = 1.2, na.rm = TRUE, show.legend = FALSE) +
     scale_x_date(date_breaks = "1 year",
                  date_labels = "%Y", expand = c(0.012, 0), 
                  limits = c(as.Date("1972-01-01", format = "%Y-%m-%d"),
                             as.Date("2016-01-01", format = "%Y-%m-%d"))) +
-    ggtitle("Flow Corrected Data") +
+    ggtitle("Flow Corrected") +
+    labs(x = "Date",
+         y = paste(unique(plot.me$ICPRB_NAME),
+                   " (Residuals)", sep = ""),
+         size = 12) +
     theme(plot.title = element_text(hjust = 0.5, face = "bold"),
           text = element_text(size = 12),
           axis.text.x = element_text(size = 11),
@@ -225,11 +251,76 @@ flow_correct_loess_plot <- function(plot.me){
           axis.line = element_line(colour = "black"),
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
+          legend.title = element_blank(),
+          legend.position = c(0.93, 1),
+          legend.direction = "horizontal",
+          legend.justification = c(0.6, 0), 
+          legend.key.width = unit(3, "lines"), 
+          legend.key.height = unit(1, "lines"),
+          legend.key = element_blank(),
+          legend.box = "horizontal",
+          legend.text = element_text(face = "bold"),
           #panel.border = element_blank(),
           panel.background = element_blank(),
-          panel.border = element_rect(colour = "black", fill = NA, size = 1),
+          #panel.border = element_rect(colour = "black", fill = NA, size = 1),
           plot.margin = unit(c(5, 0, 5, 0), "mm")
-    ) 
+    )
+  return(final.plot)
+}
+#==============================================================================
+log_plot <- function(plot.me, gage.df){
+  plot.me <- dplyr::left_join(plot.me, gage.df, by = c("DATE")) 
+  plot.me <- plot.me %>% 
+    filter(!is.na(FLOW),
+           FLOW > 0,
+           REPORTED_VALUE > 0) %>% 
+    select(REPORTED_VALUE, FLOW, DATE, ICPRB_NAME, ICPRB_UNITS, CENSORED) %>% 
+    mutate(REPORTED_VALUE = log10(REPORTED_VALUE),
+           FLOW = log10(FLOW))
+  #plot.me$RESIDUALS <- loess(REPORTED_VALUE ~ FLOW, plot.me)$residuals
+
+  plot.me$CENSORED <- factor(plot.me$CENSORED, levels = c("Uncensored",
+                                                          "Censored"))
+  #----------------------------------------------------------------------------
+  final.plot <- ggplot2::ggplot(plot.me, aes(x = FLOW,
+                                             #ggplot2::ggplot(plot.me, aes(x = DATE,
+                                             y = REPORTED_VALUE,
+                                             fill = CENSORED)) + 
+    
+    #geom_line(color = "#56B4E9", size = 1)  + # "royalblue3"
+    #geom_point(color = "#56B4E9", size = 2, na.rm = TRUE) +
+    geom_point(color = "black", aes(shape = CENSORED), size = 3, na.rm = TRUE, alpha = 0.6) +
+    scale_fill_manual(values = c("#56B4E9", "#580058"), drop = FALSE) + # "#009E73"
+    scale_shape_manual(values = c(21, 22), drop = FALSE) +
+    #geom_point(size = 2, na.rm = TRUE) +
+    stat_smooth(method = 'loess', fill = "#999999", color = "#E69F00",
+                size = 1.2, na.rm = TRUE, show.legend = FALSE) +
+    ggtitle("Flow Corrected") +
+    labs(x = "log10 Flow",
+         y = paste("log10", unique(plot.me$ICPRB_NAME),
+                   " (", unique(plot.me$ICPRB_UNITS), ")", sep = ""),
+         size = 12) +
+    theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+          text = element_text(size = 12),
+          axis.text.x = element_text(size = 11),
+          axis.text.y = element_text(size = 11),
+          axis.line = element_line(colour = "black"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          legend.title = element_blank(),
+          legend.position = c(0.93, 1),
+          legend.direction = "horizontal",
+          legend.justification = c(0.6, 0), 
+          legend.key.width = unit(3, "lines"), 
+          legend.key.height = unit(1, "lines"),
+          legend.key = element_blank(),
+          legend.box = "horizontal",
+          legend.text = element_text(face = "bold"),
+          #panel.border = element_blank(),
+          panel.background = element_blank(),
+          #panel.border = element_rect(colour = "black", fill = NA, size = 1),
+          plot.margin = unit(c(5, 0, 5, 0), "mm")
+    )
   return(final.plot)
 }
 #==============================================================================
@@ -342,7 +433,7 @@ tile_plot <- function(plot.me, param.range){
           #panel.border = element_blank(),
           #panel.border = element_rect(colour = "black", fill = NA, size = 5),
           panel.background = element_blank(),
-          plot.margin = unit(c(10, 0, 5, 0), "mm")
+          plot.margin = unit(c(10, 0, 5, 10), "mm")
     ) 
   #----------------------------------------------------------------------------
   if ("DO" %in% plot.me$ICPRB_NAME) {
@@ -483,4 +574,39 @@ uni.func <- function(my.col){
   return(final.vec)
 }
 
+
+
+blank_plot <- function(plot.me){
+  #----------------------------------------------------------------------------
+  final.plot <- ggplot2::ggplot(plot.me, aes(x = DATE,
+                                             #ggplot2::ggplot(plot.me, aes(x = DATE,
+                                             y = REPORTED_VALUE,
+                                             fill = "white")) + 
+    
+    #geom_point(color = "white", size = 3, na.rm = TRUE, alpha = 0.6) +
+    theme(plot.title = element_blank(),
+          text = element_blank(),
+          axis.text.x = element_blank(),
+          axis.text.y = element_blank(),
+          axis.line = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          legend.title = element_blank(),
+          axis.ticks.x = element_blank(),
+          axis.ticks.y = element_blank(),
+          #legend.position = element_blank(),
+          #legend.direction = element_blank(),
+          #legend.justification = element_blank(), 
+          #legend.key.width = unit(3, "lines"), 
+          #legend.key.height = unit(1, "lines"),
+          legend.key = element_blank(),
+          #legend.box = "horizontal",
+          legend.text = element_blank(),
+          #panel.border = element_blank(),
+          panel.background = element_blank(),
+          #panel.border = element_rect(colour = "black", fill = NA, size = 1),
+          plot.margin = unit(c(5, 0, 5, 0), "mm")
+    )
+  return(final.plot)
+}
 

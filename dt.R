@@ -35,3 +35,17 @@ dt.react <- reactive({
 #---------------------------------------------------------------------------- 
 # Render a table representing the selected Site and Parameter.
 output$param_table <- DT::renderDataTable(dt.react()) # End output$param_table
+
+#============================================================================= 
+# Create the DataTable.
+dt.react2 <- reactive({
+  #if (is.null(sel.param())) return(NULL)
+  # Prevent red error message from appearing while data is loading.
+  #if(is.null(gage.tbl())) return(NULL)
+  
+  final.dt <- datatable(gage.tbl())
+  
+  return(final.dt)
+})
+
+output$param_table2 <- DT::renderDataTable(dt.react2()) # End output$param_table

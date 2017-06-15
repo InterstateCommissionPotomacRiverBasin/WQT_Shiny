@@ -35,6 +35,8 @@ param.tbl <- reactive({
     final.df <- NULL
   }
   #final.df$DATE <- as.Date(final.df$DATE, "%Y-%m-%d")
+  final.df <- final.df %>% 
+    filter(DEPTH <= 1 | is.na(DEPTH))
   return(final.df)
 }) # End param.tbl
 
@@ -59,7 +61,7 @@ param.react <- reactive({
   } else {
     final.vec <- unlist(dbGetQuery(pool, paste(
       'SELECT DISTINCT "ICPRB_NAME"',
-      "FROM", paste0('"SITE_', sel.site(), '"'))))
+      "FROM", paste0('"site_', sel.site(), '"'))))
   }
   
   return(final.vec)
@@ -73,6 +75,7 @@ sel.gage <- reactive({
   } else {
     final.vec <- unique(param.tbl()$GAGE_ID)
   }
+  if (length(final.vec) > 1) final.vec <- final.vec[!is.na(final.vec)]
   return(final.vec)
 })
 #----------------------------------------------------------------------------
@@ -84,3 +87,37 @@ gage.info.react <- reactive({
   if (nrow(final.df) == 0) final.df <- NULL
   return(final.df)
 }) # End param.react
+
+#==============================================================================
+# Upload data from postgres for the selected gage.
+#==============================================================================
+gage.tbl <- reactive({
+  if (is.null(sel.gage()) |
+      is.na(sel.gage())) {
+    final.df <- NULL
+  } else{
+    final.df <- dbGetQuery(pool, paste(
+      'SELECT * FROM "gage_flow"',
+      'WHERE "GAGE_ID" =', paste0("'", sel.gage(), "'")))
+    if (nrow(final.df) == 0) final.df <- NULL
+    final.df$GAGE_ID <- as.character(final.df$GAGE_ID)
+  }
+
+  return(final.df)
+}) # End param.tbl
+
+#==============================================================================
+# Upload depth data from postgres.
+#==============================================================================
+
+depth.react <- reactive({
+  #wqt <- dbReadTable(pool, paste0("SITE_", input$SITE.site))
+  if (is.null(sel.site()) | sel.site() == "") return(NULL)
+  if (is.null(sel.param())) return(NULL)
+  final.df <- dbGetQuery(pool, paste(
+    'SELECT "DEPTH" FROM',  paste0('"site_', sel.site(), '"'),
+    'WHERE "ICPRB_NAME" =', paste0("'", sel.param(), "'")))
+  if (is.null(final.df)) return(NULL)
+  final.vec <- sort(unique(final.df$DEPTH))
+  return(final.vec)
+}) # End depth.react

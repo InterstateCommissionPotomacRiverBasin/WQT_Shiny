@@ -116,7 +116,7 @@ output$SITE_INFO_LOOP <- renderUI({
                      paste("<strong>Agency Formal Name:</strong>", uni.func(sub.i$AGENCY_NAME)),  
                      paste("<strong>Site Name:</strong>", uni.func(sub.i$SITE_NAME)), 
                      paste("<strong>Activity Name:</strong>", uni.func(sub.i$ActivityMediaName)),
-                     paste("<strong>Activity Type Code:</strong>", uni.func(sub.i$ActivityTypeCode)),
+                     paste("<strong>Activity Type Code:</strong>", uni.func(sub.i$ACTIVITY_TYPE)),
                      "<br/>", sep = "<br/>")
     return(sub.vec)
   }) # End site.list
@@ -124,3 +124,10 @@ output$SITE_INFO_LOOP <- renderUI({
   HTML(paste(final.vec[,1], sep = "<br/>"))
 }) # End output$SITE_INFO_LOOP
 })
+
+#--------------------------------------------------------------------------
+output$ALL_DEPTH <- renderUI({
+  all.depth <- as.vector(depth.react())
+  uni.list <- uni.func(all.depth)
+  HTML(paste("<strong>Depth (m):</strong>", uni.list, sep = " "))
+}) # End output$DEPTH

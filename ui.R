@@ -114,11 +114,9 @@ shinyUI(fluidPage(
       #************************************************************************
       tabPanel(
         "Figures",
-        fluidRow(plotOutput("PLOTS", height = 1200, width = 1500))
-        #fluidRow(plotOutput("LOESS", height = 400, width = 1530))#,
-        #fluidRow(column(
-        #  12, leafletOutput("mymap", height = 500, width = 1530), p()
-        #))
+        fluidRow(plotOutput("PLOTS", height = "1200", width = "1500"))
+        #fluidRow(uiOutput("plot.ui"))
+        #fluidRow(plotOutput("PLOTS", height = uiOutput("plot.height"), width = "1500"))
       ),
       #************************************************************************
       # Tab Data Script (Tab 2)
@@ -164,27 +162,49 @@ shinyUI(fluidPage(
                tags$hr(),
                tags$div(class = "header", checked = NA,
                         tags$h3("Site Information")),
-               htmlOutput("SITE_INFO_LOOP")
+               htmlOutput("SITE_INFO_LOOP"), 
+               tags$hr(),
+               tags$div(class = "header", checked = NA,
+                        tags$h3("Depth")),
+               "For this analysis only samples collected at the surface (0m)
+               or near the surface (<= 1m) were utilized. Samples with missing
+               depth values were assumed to be collected at the surface. This
+               assumption may not always be correct. Therefore, the user should 
+               be cautious whenever the depth is reported as 'blank.'",
+               br(),
+               br(),
+               "Depths greater than 1 m were excluded to create a more 
+               standardized output for all stations and parameters. Including 
+               all samples collected at depths below 1 m may skew the data.",
+               br(),
+               br(),
+               "Below are all of the depths found in the database. When the 
+               data table is downloaded all of the available depths will be 
+               included.",
+               br(),
+               htmlOutput("ALL_DEPTH")
                
-      ),
+               
+      )#,
       #************************************************************************
       # Tab Downloads Script (Tab 5)
       #************************************************************************
-      tabPanel("Download",
-               div(fluidRow(p(selectInput("huc8.download", "HUC 8",
-                           choices = sort(unique(param.range$ICPRB_NAME)),
-                           selectize = TRUE, selected = "All HuCs"))),
-                   style = "text-align: center;"),
-               div(fluidRow(p(selectInput("site.download", "Site", choices = list.huc,
-                           selected = "All Sites", selectize = TRUE))),
-                   style = "text-align: center;"),
-               div(fluidRow(p(selectInput("param.download", "Parameter",
-                                          choices = unique(param.range$ICPRB_NAME),
-                                          selectize = TRUE))),
-                   style = "text-align: center;")
-  
-               
-      )
+#      tabPanel("Download",
+#               div(fluidRow(p(selectInput("huc8.download", "HUC 8",
+#                           choices = sort(unique(param.range$ICPRB_NAME)),
+#                           selectize = TRUE, selected = "All HuCs"))),
+#                   style = "text-align: center;"),
+#               div(fluidRow(p(selectInput("site.download", "Site", choices = list.huc,
+#                           selected = "All Sites", selectize = TRUE))),
+#                   style = "text-align: center;"),
+#               div(fluidRow(p(selectInput("param.download", "Parameter",
+#                                          choices = unique(param.range$ICPRB_NAME),
+#                                          selectize = TRUE))),
+#                   style = "text-align: center;")
+#      ),
+#      tabPanel("TEST",
+#               fluidRow(dataTableOutput('param_table2'))
+#               )
     ))
     #==========================================================================
       )
