@@ -6,20 +6,10 @@
 # Updated: 2/28/17
 #==============================================================================
 #==============================================================================
-
-library(shiny)
-library(png)
-library(DT)
-library(dplyr)
-library(ggplot2)
-library(gridExtra)
-library(RPostgreSQL)
-library(grid)
-library(Cairo)
-options(shiny.usecairo = TRUE)
-#wqt <- read.csv("./data/wqt.csv", stringsAsFactors = FALSE)
-
 shinyServer(function(input, output, session) {
+  #----------------------------------------------------------------------------
+  # Stop App when window is closed.
+  session$onSessionEnded(stopApp)
   #----------------------------------------------------------------------------
   # Selection and import script
   source("select_import.R", local = TRUE)
@@ -47,4 +37,7 @@ shinyServer(function(input, output, session) {
   #----------------------------------------------------------------------------
   # Tab Downloads Script (Tab 5)
   source("downloads.R", local = TRUE)
+  #----------------------------------------------------------------------------
+  # Tab References Script (Tab 6)
+  source("references.R", local = TRUE)
 }) # End Shiny Server
