@@ -12,32 +12,32 @@ shinyServer(function(input, output, session) {
   session$onSessionEnded(stopApp)
   #----------------------------------------------------------------------------
   # Selection and import script
-  source("select_import.R", local = TRUE)
+  source("server/select_import_server.R", local = TRUE)
   #----------------------------------------------------------------------------
   # If switching to Query by Paramter
-  source("query_by_param.R", local = TRUE)
+  source("server/query_by_param_server.R", local = TRUE)
   #----------------------------------------------------------------------------
   # Query by Site
-  source("query_by_site.R", local = TRUE)
+  source("server/query_by_site_server.R", local = TRUE)
   #----------------------------------------------------------------------------
   # Side panel script excluding dropdown menues (See "select_import.R")
-  source("sidepanel.R", local = TRUE)
+  source("server/sidepanel_server.R", local = TRUE)
   #----------------------------------------------------------------------------
   # Tab Figures Script (Tab 1)
-  source("plots.R", local = TRUE)
+  source("server/plots_server.R", local = TRUE)
   #----------------------------------------------------------------------------
   # Tab Data Script (Tab 2)
-  source("dt.R", local = TRUE)
+  source("server/dt_server.R", local = TRUE)
   #----------------------------------------------------------------------------
   # Tab Maps Script (Tab 3)
-  source("map.R", local = TRUE)
+  source("server/map_server.R", local = TRUE)
   #----------------------------------------------------------------------------
   # Tab Metadata Script (Tab 4)
-  source("metadata.R", local = TRUE)
+  source("server/metadata_server.R", local = TRUE)
   #----------------------------------------------------------------------------
   # Tab Downloads Script (Tab 5)
-  source("downloads.R", local = TRUE)
+  source("server/downloads_server.R", local = TRUE)
   #----------------------------------------------------------------------------
   # Tab References Script (Tab 6)
-  source("references.R", local = TRUE)
+  source("server/references_server.R", local = TRUE)
 }) # End Shiny Server

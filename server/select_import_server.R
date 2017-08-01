@@ -26,17 +26,18 @@ param.tbl <- reactive({
   if (is.null(sel.site()) | sel.site() == "") return(NULL)
   if (is.null(sel.param())) return(NULL)
   wqt <- dbGetQuery(pool, paste(
-    "SELECT * FROM",  paste0('"site_', sel.site(), '"'),
-    'WHERE "ICPRB_NAME" =', paste0("'", sel.param(), "'")))
+    'SELECT * FROM "param_data"',  
+    'WHERE "SITE" = ', paste0("'", sel.site(), "'"),
+    'AND "ICPRB_NAME" =', paste0("'", sel.param(), "'")))
   if (is.null(wqt)) return(NULL)
   if ("ICPRB_VALUE" %in% names(wqt)) {
-    final.df <- wqt[!is.na(wqt$ICPRB_VALUE), ]
+    final.df <- wqt[!is.na(wqt$ICPRB_VALUE), ] %>% 
+      filter(DEPTH <= 1 | is.na(DEPTH))
   } else {
     final.df <- NULL
   }
   #final.df$DATE <- as.Date(final.df$DATE, "%Y-%m-%d")
-  final.df <- final.df %>% 
-    filter(DEPTH <= 1 | is.na(DEPTH))
+
   return(final.df)
 }) # End param.tbl
 
@@ -60,8 +61,8 @@ param.react <- reactive({
     final.vec <- NULL
   } else {
     final.vec <- unlist(dbGetQuery(pool, paste(
-      'SELECT DISTINCT "ICPRB_NAME"',
-      "FROM", paste0('"site_', sel.site(), '"'))))
+      'SELECT DISTINCT "ICPRB_NAME" FROM "param_data"',
+      'WHERE "SITE" = ', paste0("'", sel.site(), "'"))))
   }
   
   return(final.vec)

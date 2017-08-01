@@ -110,9 +110,13 @@ observeEvent(sel.site(), {
   }) # End output$LONG
   #--------------------------------------------------------------------------
   output$DEPTH <- renderUI({
-    sub.depth <- param.tbl() %>% 
-      filter(DEPTH <= 1 | is.na(DEPTH)) %>% 
-      .$DEPTH
+    if (is.null(param.tbl())) {
+      sub.depth <- NULL
+    } else {
+      sub.depth <- param.tbl() %>% 
+        filter(DEPTH <= 1 | is.na(DEPTH)) %>% 
+        .$DEPTH
+    }
     uni.list <- uni.func(sub.depth)
     HTML(paste("<strong>Depth (m):</strong>", uni.list, sep = " "))
   }) # End output$DEPTH
