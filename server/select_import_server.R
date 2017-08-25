@@ -26,7 +26,7 @@ param.tbl <- reactive({
   if (is.null(sel.site()) | sel.site() == "") return(NULL)
   if (is.null(sel.param())) return(NULL)
   wqt <- dbGetQuery(pool, paste(
-    'SELECT * FROM "param_data"',  
+    'SELECT * FROM "wq_data"',  
     'WHERE "SITE" = ', paste0("'", sel.site(), "'"),
     'AND "ICPRB_NAME" =', paste0("'", sel.param(), "'")))
   if (is.null(wqt)) return(NULL)
@@ -61,7 +61,7 @@ param.react <- reactive({
     final.vec <- NULL
   } else {
     final.vec <- unlist(dbGetQuery(pool, paste(
-      'SELECT DISTINCT "ICPRB_NAME" FROM "param_data"',
+      'SELECT DISTINCT "ICPRB_NAME" FROM "wq_data"',
       'WHERE "SITE" = ', paste0("'", sel.site(), "'"))))
   }
   
@@ -85,6 +85,18 @@ gage.info.react <- reactive({
   final.df <- dbGetQuery(pool, paste(
     'SELECT * FROM "gage_info"',
     'WHERE "GAGE_ID" =', paste0("'", sel.gage(), "'")))
+  if (nrow(final.df) == 0) final.df <- NULL
+  return(final.df)
+}) # End param.react
+#----------------------------------------------------------------------------
+wilcox.react <- reactive({
+  if (is.null(sel.param())) return(NULL)
+  
+  final.df <- dbGetQuery(pool, paste(
+    'SELECT "site", "trend", "icprb_name"',
+    'FROM "wilcox_output"',
+    'WHERE "icprb_name" =', paste0("'", sel.param(), "'")))
+  
   if (nrow(final.df) == 0) final.df <- NULL
   return(final.df)
 }) # End param.react
@@ -116,8 +128,9 @@ depth.react <- reactive({
   if (is.null(sel.site()) | sel.site() == "") return(NULL)
   if (is.null(sel.param())) return(NULL)
   final.df <- dbGetQuery(pool, paste(
-    'SELECT "DEPTH" FROM',  paste0('"site_', sel.site(), '"'),
-    'WHERE "ICPRB_NAME" =', paste0("'", sel.param(), "'")))
+    'SELECT "DEPTH" FROM',  '"wq_data"',
+    'WHERE "ICPRB_NAME" =', paste0("'", sel.param(), "'"),
+    'AND "SITE" = ', paste0("'", sel.site(), "'")))
   if (is.null(final.df)) return(NULL)
   final.vec <- sort(unique(final.df$DEPTH))
   return(final.vec)

@@ -25,7 +25,7 @@ sidebarPanel(
     selectInput("PARAM.site", "Parameter", choices = "TEMP", selectize = TRUE)
   ), # End conditional panel for Site.
   #------------------------------------------------------------------------
-  htmlOutput("ICPRB_UNITS"),
+  htmlOutput("ICPRB_UNIT"),
   htmlOutput("OUTLIERS"),
   htmlOutput("CENSORED"),
   htmlOutput("PARAM_LIST"),
@@ -55,7 +55,7 @@ sidebarPanel(
   tags$hr(), # End Nearest Gage Information Section
   #------------------------------------------------------------------------
   tags$div(class = "header", checked = NA,
-           tags$h3("Download Data"), align = "center"),
+           tags$h3("Download"), align = "center"),
   # style font family as well in addition to background and font color
   tags$head(tags$style(".button{background-color:#56B4E9;} .button{color: black;}
                        .button{font-family: Courier New;} .button{width: 250px;}

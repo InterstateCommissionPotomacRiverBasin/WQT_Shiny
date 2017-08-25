@@ -30,16 +30,19 @@ output$ICPRB_UNITS <- renderUI({
 }) # End output$ICPRB_UNITS
 #----------------------------------------------------------------------------
 plotInput <- reactive({
+  withProgress(message = "Loading...", value = 0, {
   # Prevent red error message from appearing while data is loading.
   if(is.null(prep.react.monthly()) |
      is.null(prep.react.raw())) return(NULL)
   #-------------------------------------------------------------------------
   monthly.df <- prep.react.monthly()
+  incProgress(1/3)
   #-------------------------------------------------------------------------
   sub.outlier <- outliers[outliers$PARAMETER %in% sel.param(), ]
   raw.df <- param.tbl()
   raw.df <- raw.df[raw.df$REPORTED_VALUE < sub.outlier$UP_FENCE_4.5 &
                    raw.df$REPORTED_VALUE > sub.outlier$LOW_FENCE_4.5, ]
+  incProgress(1/3)
   #-------------------------------------------------------------------------
   tile.plot <- tile_plot(monthly.df, param.range)
   raw.loess.plot <- raw_loess_plot(raw.df)
@@ -58,7 +61,8 @@ plotInput <- reactive({
                           ggplotGrob(blank.plot),
                           size = "first"))
   }
-
+  incProgress(1/3)
+  })
   
 }) # End plotInput
 #----------------------------------------------------------------------------

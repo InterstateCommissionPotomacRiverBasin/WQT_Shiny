@@ -30,7 +30,7 @@ shinyServer(function(input, output, session) {
   source("server/dt_server.R", local = TRUE)
   #----------------------------------------------------------------------------
   # Tab Maps Script (Tab 3)
-  source("server/map_server.R", local = TRUE)
+  source("server/map_server_dev.R", local = TRUE)
   #----------------------------------------------------------------------------
   # Tab Metadata Script (Tab 4)
   source("server/metadata_server.R", local = TRUE)
@@ -39,5 +39,5 @@ shinyServer(function(input, output, session) {
   source("server/downloads_server.R", local = TRUE)
   #----------------------------------------------------------------------------
   # Tab References Script (Tab 6)
-  source("server/references_server.R", local = TRUE)
+  source("server/relevant_pubs_server.R", local = TRUE)
 }) # End Shiny Server

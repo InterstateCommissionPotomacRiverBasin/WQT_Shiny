@@ -5,6 +5,18 @@ observeEvent(sel.site(), {
   
   final.param <- unique(sort(as.character(sub.param)))
   #============================================================================= 
+  # Report ICPRB_UNITS
+  #=============================================================================
+  output$ICPRB_UNIT <- renderUI({
+    # Prevent red error message from appearing while data is loading.
+    if(is.null(param.tbl())) return(NULL)
+    #============================================================================
+    sub.param <- param.tbl()[param.tbl()$SITE %in% sel.site() & param.tbl()$ICPRB_NAME %in% sel.param(), ]
+    units.vec <- unique(sub.param$ICPRB_UNITS)
+    #============================================================================
+    HTML(paste("<strong>Units:</strong>", units.vec, sep = " "))
+  }) # End output$OUTLIERS
+  #============================================================================= 
   # A count of how many outliers were removed from the data used to create the figures.
   # The outliers will still appear in the "Data" tab.
   #=============================================================================
@@ -122,7 +134,7 @@ observeEvent(sel.site(), {
   }) # End output$DEPTH
   #--------------------------------------------------------------------------
   output$REPLICATE <- renderUI({
-    uni.list <- uni.func(param.tbl()$Replicate.Number)
+    uni.list <- uni.func(param.tbl()$REPLICATE_NUMBER)
     HTML(paste("<strong>Replicate:</strong>", uni.list, sep = " "))
   }) # End output$REPLICATE
   #--------------------------------------------------------------------------

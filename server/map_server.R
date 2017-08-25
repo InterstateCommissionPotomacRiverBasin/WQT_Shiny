@@ -31,11 +31,14 @@ points.gage <- eventReactive(sel.site(), {
 output$mymap <- renderLeaflet({
   #--------------------------------------------------------------------------
   # Create a seperate table in the data base, so that this moves faster.
-  system.time(
   map.df <- dbGetQuery(pool, paste(
-    'SELECT DISTINCT "SITE", "LATITUDE", "LONGITUDE", "SITE_NAME_EDIT"',
-    'FROM "param_data"')))
-  map.df$TYPE <- "base"
+    'SELECT DISTINCT "ICPRB_NAME", "SITE", "LATITUDE", "LONGITUDE", "SITE_NAME_EDIT"',
+    'FROM "wq_data"',
+    'WHERE "ICPRB_NAME" =', paste0("'", sel.param(), "'"))) %>% 
+    dplyr::mutate(TYPE = "base")
+ # map.df$TYPE <- "base"
+#   map.df <- map.points.react() %>% 
+#     dplyr::mutate(TYPE = "base")
   #--------------------------------------------------------------------------
 #  map.df <- dplyr::bind_rows(all.points, points(), points.gage()) %>% 
 #    mutate(TYPE = factor(TYPE, levels = c("base", "selected", "gage")))

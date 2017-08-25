@@ -212,7 +212,7 @@ tile_plot <- function(plot.me, param.range){
         colours = c("#56B4E9", "#E69F00"),
         breaks = c(param.range$MIN - 0.001,  param.range$MAX),
         #breaks = c(param.range$'05th',  param.range$'95th'),
-        labels = c(param.range$MIN,  param.range$MAX),
+        labels = c(round(param.range$MIN, 2),  round(param.range$MAX, 2)),
         limits = c(param.range$MIN - 0.001,  param.range$MAX),
         guide = "colorbar",
         na.value = "white"#,

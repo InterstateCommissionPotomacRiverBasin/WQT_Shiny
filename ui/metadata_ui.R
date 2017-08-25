@@ -8,13 +8,21 @@ tabPanel("Metadata",
          value for assigning outlier fences. The standard value was 
          subtracted from the lower quartile, to define the lower outlier
          fence, and added to the upper quartile, to define the upper 
-         outlier fence.",
+         outlier fence. Parameter values below the lower fence or 
+         above the upper fence were omitted from the Figures tab. 
+         The remaining tabs are not influenced by the removal of outliers.",
          
          htmlOutput("META_OUTLIER_INFO"),
          tags$hr(),
          tags$div(class = "header", checked = NA,
                   tags$h3("Censored Data")),
-         "Censored data refers to data that was above or below a detection limit.",
+         "Censored data refers to data that was below a detection limit. 
+         If the parameter value was indicated as below detection limit, 
+         then the parameter value was represented by half the value of 
+         the detection limit.  Any site/parameter where more than 50% censored 
+         data, was omitted from the database.  These steps occurred during 
+         database organization, and therefore, have the potential to influence 
+         information in the sidebar or any of the tabs.",
          tags$hr(),
          tags$div(class = "header", checked = NA,
                   tags$h3("Parameter Standardization")),
@@ -27,11 +35,11 @@ tabPanel("Metadata",
          tags$hr(),
          tags$div(class = "header", checked = NA,
                   tags$h3("Depth")),
-         "For this analysis only samples collected at the surface (0m)
-               or near the surface (<= 1m) were utilized. Samples with missing
+         "For this analysis, only samples collected at the surface (0 m)
+               or near the surface (<= 1 m) were utilized. Samples with missing
                depth values were assumed to be collected at the surface. This
                assumption may not always be correct. Therefore, the user should 
-               be cautious whenever the depth is reported as 'blank.'",
+               be cautious whenever the depth is reported as ",tags$em('"Blank"'), ".",
          br(),
          br(),
          "Depths greater than 1 m were excluded to create a more 

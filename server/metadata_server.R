@@ -38,50 +38,52 @@ output$META_OUTLIER_INFO <- renderUI({
 #==========================================================================
 # Parameter Standardization Heading
 #==========================================================================
-sub.param_stand <- lapply(unique(sub.param$ProviderName), function(x){
-  keep.cols <- c("ProviderName", "PARAMETER",
-                 "REPORTED_UNITS", "USGSPCode",
-                 "DetectionQuantitationLimitTypeName",
-                 "DetectionQuantitationLimitMeasure.MeasureValue",
-                 "DetectionQuantitationLimitMeasure.MeasureUnitCode",
+sub.param_stand <- lapply(unique(sub.param$PROVIDERNAME), function(x){
+  if (is.null(sub.param)) return(NULL)
+  keep.cols <- c("PROVIDERNAME", "PARAMETER",
+                 "REPORTED_UNITS", "USGSPCODE",
+                 "DETECTIONQUANTITATIONLIMITTYPENAME",
+                 "DETECTIONQUANTITATIONLIMITMEASURE_MEASUREVALUE",
+                 "DETECTIONQUANTITATIONLIMITMEASURE_MEASUREUNITCODE",
                  "ICPRB_CONVERSION")
   keep.cols[!keep.cols %in% names(sub.param)]
   
-  return(unique(sub.param[sub.param$ProviderName %in% x, keep.cols]))
+  return(unique(sub.param[sub.param$PROVIDERNAME %in% x, keep.cols]))
   
 }) # End sub.param_stand
 #--------------------------------------------------------------------------
 output$PARAM_STAND_LOOP <- renderUI({
   #uni.list <- uni.func(sub.param$PARAMETER)
   #test.list <- list()
+  if (is.null(param.react()) || is.null(sub.param_stand)) return(NULL)
   param.list <- lapply(1:length(sub.param_stand), function(i) {
     
     sub.i <- data.frame(sub.param_stand[i], stringsAsFactors = FALSE)
-    sub.i$final.detect <- paste(sub.i$DetectionQuantitationLimitMeasure.MeasureValue, 
-                                sub.i$DetectionQuantitationLimitMeasure.MeasureUnitCode, sep = " ")
+    sub.i$FINAL_DETECT <- paste(sub.i$DETECTIONQUANTITATIONLIMITMEASURE_MEASUREVALUE, 
+                                sub.i$DETECTIONQUANTITATIONLIMITMEASURE_MEASUREUNITCODE, sep = " ")
     #----------------------------------------------------------------------
-    detect.cols <- c("DetectionQuantitationLimitMeasure.MeasureValue",
-                     "DetectionQuantitationLimitMeasure.MeasureUnitCode")
+    detect.cols <- c("DETECTIONQUANTITATIONLIMITMEASURE_MEASUREVALUE",
+                     "DETECTIONQUANTITATIONLIMITMEASURE_MEASUREUNITCODE")
     detect.list <- lapply(1:nrow(unique(sub.i[, detect.cols])), function(j) {
       detect.this <- unique(sub.i[, c(detect.cols)])
       sub.j <- data.frame(detect.this[j, ], stringsAsFactors = FALSE)
-      final.df <- paste(sub.j$DetectionQuantitationLimitMeasure.MeasureValue, 
-                        sub.j$DetectionQuantitationLimitMeasure.MeasureUnitCode, sep = " ")
+      final.df <- paste(sub.j$DETECTIONQUANTITATIONLIMITMEASURE_MEASUREVALUE, 
+                        sub.j$DETECTIONQUANTITATIONLIMITMEASURE_MEASUREUNITCODE, sep = " ")
       return(final.df)
     }) # End detec.list
     detect.final <- do.call(rbind, detect.list)
     #----------------------------------------------------------------------
-    final.i <- paste(paste("<strong>Data Provider:</strong>", uni.func(sub.i$ProviderName)), 
+    final.i <- paste(paste("<strong>Data Provider:</strong>", uni.func(sub.i$PROVIDERNAME)), 
                      paste("<strong>Reported Parameter:</strong>",
                            uni.func(sub.i$PARAMETER), sep = " "),
                      paste("<strong>Reported Units:</strong>", uni.func(sub.i$REPORTED_UNITS), sep = " "),
-                     paste("<strong>USGS Code:</strong>", uni.func(sub.i$USGSPCode), sep = " "),
-                     paste("<strong>Detection Limit Type:</strong>", uni.func(sub.i$DetectionQuantitationLimitTypeName), sep = " "),
-                     paste("<strong>Detection Limit Value:</strong>", uni.func(sub.i$final.detect), sep = " "),
+                     paste("<strong>USGS Code:</strong>", uni.func(sub.i$USGSPCODE), sep = " "),
+                     paste("<strong>Detection Limit Type:</strong>", uni.func(sub.i$DETECTIONQUANTITATIONLIMITTYPENAME), sep = " "),
+                     paste("<strong>Detection Limit Value:</strong>", uni.func(sub.i$FINAL_DETECT), sep = " "),
                      paste("<strong>Conversion Applied:</strong>", uni.func(sub.i$ICPRB_CONVERSION), sep = " "),
                      
-                     #paste(uni.func(sub.i$DetectionQuantitationLimitMeasure.MeasureValue),
-                     #uni.func(sub.i$DetectionQuantitationLimitMeasure.MeasureUnitCode)),
+                     #paste(uni.func(sub.i$DETECTIONQUANTITATIONLIMITMEASURE_MEASUREVALUE),
+                     #uni.func(sub.i$DETECTIONQUANTITATIONLIMITMEASURE_MEASUREUNITCODE)),
                      
                      
                      "<br/>", sep = "<br/>")
@@ -98,24 +100,24 @@ output$PARAM_STAND_LOOP <- renderUI({
 #==========================================================================
 # Site Information Heading
 #==========================================================================
-sub.site_info <- lapply(unique(sub.param$ProviderName), function(x){
-  keep.cols <- c("ProviderName", "AGENCY_NAME", "SITE_NAME", "DEPTH",
-                 "ActivityMediaName", "ACTIVITY_TYPE",
-                 "SampleCollectionMethod.MethodIdentifier",
-                 "SampleCollectionMethod.MethodIdentifierContext")
+sub.site_info <- lapply(unique(sub.param$PROVIDERNAME), function(x){
+  keep.cols <- c("PROVIDERNAME", "AGENCY_NAME", "SITE_NAME", "DEPTH",
+                 "ACTIVITYMEDIANAME", "ACTIVITY_TYPE",
+                 "SAMPLECOLLECTIONMETHOD_METHODIDENTIFIER",
+                 "SAMPLECOLLECTIONMETHOD_METHODIDENTIFIERCONTEXT")
   keep.cols[!keep.cols %in% names(sub.param)]
   
-  return(unique(sub.param[sub.param$ProviderName %in% x, keep.cols]))
+  return(unique(sub.param[sub.param$PROVIDERNAME %in% x, keep.cols]))
   
 }) # End sub.site_info
 #--------------------------------------------------------------------------
 output$SITE_INFO_LOOP <- renderUI({
   site.list <- lapply(1:length(sub.site_info), function(i) {
     sub.i <- data.frame(sub.site_info[i], stringsAsFactors = FALSE)
-    sub.vec <- paste(paste("<strong>Data Provider:</strong>", uni.func(sub.i$ProviderName)), 
+    sub.vec <- paste(paste("<strong>Data Provider:</strong>", uni.func(sub.i$PROVIDERNAME)), 
                      paste("<strong>Agency Formal Name:</strong>", uni.func(sub.i$AGENCY_NAME)),  
                      paste("<strong>Site Name:</strong>", uni.func(sub.i$SITE_NAME)), 
-                     paste("<strong>Activity Name:</strong>", uni.func(sub.i$ActivityMediaName)),
+                     paste("<strong>Activity Name:</strong>", uni.func(sub.i$ACTIVITYMEDIANAME)),
                      paste("<strong>Activity Type Code:</strong>", uni.func(sub.i$ACTIVITY_TYPE)),
                      "<br/>", sep = "<br/>")
     return(sub.vec)
