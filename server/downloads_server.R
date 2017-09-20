@@ -67,7 +67,7 @@ output$param.tbl.download <- downloadHandler(
            Sys.Date(), ".csv")
   },
   content = function(con) {
-    write.csv(input.react(), con, row.names = FALSE)
+    data.table::fwrite(input.react(), con)
   }
 ) # End ouput$param.tbl.download
 #============================================================================
