@@ -15,7 +15,8 @@ prep.react.monthly <- reactive({
   if(is.null(param.tbl())) return(NULL)
   # Prep data when data is available
   final.df <- prep_plot(param.tbl(), sel.site(), sel.param(), outliers,
-                        monthly.mean = TRUE)
+                        monthly.mean = TRUE) %>% 
+    mutate(YEAR = as.Date(YEAR, format = "%Y"))
   # Remove NAs from the REPORTING_VALUE column.
   # final.df <- final.df[complete.cases(final.df$REPORTED_VALUE), ]
   # End prep.react reactive function.
