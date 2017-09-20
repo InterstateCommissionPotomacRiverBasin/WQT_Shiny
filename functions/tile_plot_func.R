@@ -65,49 +65,53 @@ tile_plot <- function(plot.me, param.range){
     bad.plot$OUTLIER <- "tomato3"
   }
   #============================================================================
-  
   final.plot <- ggplot2::ggplot(data = plot.me, aes(x = YEAR, y = MONTH, group = c(SITE))) +
     #labs(title = paste("Site:", long.df$SITE, sep = " ")) +
-    labs(title = "", subtitle = "", #title = paste("Site:", plot.me$SITE, sep = " "),
+    labs(title = "Heatmap", #subtitle = "", #title = paste("Site:", plot.me$SITE, sep = " "),
          #     subtitle = paste("ICPRB_NAME:", unique(plot.me$ICPRB_NAME),
          #                      unique((plot.me$ICPRB_UNITS)), sep = " "),
          x = "Year",
          y = "Month") +
     geom_tile(aes(fill = as.numeric(REPORTED_VALUE),
-                  color = as.numeric(REPORTED_VALUE)), colour = "white") +
+                  color = as.numeric(REPORTED_VALUE)),
+              colour = "white") +
     geom_text(aes(label = ifelse(is.na(as.character(REPORTED_VALUE)) | 
                                    REPORTED_VALUE %in% "NA", "", REPORTED_VALUE)),
               #sprintf("%s", as.character(REPORTED_VALUE)))),
               size = 3) +
-    
-    guides(color = guide_legend(label.position = "bottom")) +
-    theme(plot.title = element_text(hjust = 0.5, size = 12),
-          plot.subtitle = element_text(hjust = 0.5, size = 11),
-          text = element_text(size = 12),
-          axis.text.x = element_text(size = 11),
-          axis.text.y = element_text(size = 11),
-          #legend.position = "top",
-          legend.title = element_blank(),
-          legend.position = c(0.5, 1),
-          legend.direction = "horizontal",
-          legend.justification = c(0.6, 0), 
-          legend.key.width = unit(3, "lines"), 
-          legend.key.height = unit(1.5, "lines"),
-          legend.key = element_blank(),
-          legend.box = "horizontal",
-          legend.text = element_text(face = "bold"),
-          #legend.background = element_rect(size = 0.5,
-          #                                 linetype = "solid", 
-          #                                 colour = "black"),
-          axis.line = element_line(colour = "black"),
-          axis.ticks.x = element_blank(),
-          axis.ticks.y = element_blank(),
-          panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          #panel.border = element_blank(),
-          #panel.border = element_rect(colour = "black", fill = NA, size = 5),
-          panel.background = element_blank(),
-          plot.margin = unit(c(10, 0, 5, 10), "mm")
+    scale_x_date(date_breaks = "2 year",
+                 date_labels = "%Y",
+                 limits = c(as.Date("1972-01-01", format = "%Y-%m-%d"),
+                            as.Date("2018-01-01", format = "%Y-%m-%d")),
+                 expand = c(0, 0)) +
+
+    theme(#plot.title = element_text(hjust = 0.5, vjust = 8, face = "bold"),
+      plot.title = element_blank(),
+      text = element_text(size = 12),
+      axis.text.x = element_text(size = 11, hjust = -0.2, vjust = 0),
+      #axis.text.x = element_text(size = 11),
+      axis.text.y = element_text(size = 11),
+      axis.title.x = element_blank(),
+      legend.position = c(0.5, 1),
+      legend.direction = "horizontal",
+      legend.justification = c(0.6, 0), 
+      legend.key.width = unit(2, "lines"), 
+      legend.key.height = unit(1.2, "lines"),
+      #legend.key = element_blank(),
+      legend.box = "horizontal",
+      #legend.text = element_text(face = "bold"),
+      #legend.background = element_rect(size = 0.5,
+      #                                 linetype = "solid", 
+      #                                 colour = "black"),
+      axis.line = element_line(colour = "black"),
+      axis.ticks.x = element_blank(),
+      axis.ticks.y = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      #panel.border = element_blank(),
+      #panel.border = element_rect(colour = "black", fill = NA, size = 5),
+      panel.background = element_blank(),
+      plot.margin = unit(c(20, 0, 15, 10), "mm")
     ) 
   #----------------------------------------------------------------------------
   if ("DO" %in% plot.me$ICPRB_NAME) {
@@ -237,5 +241,13 @@ tile_plot <- function(plot.me, param.range){
   #                                     REPORTED_VALUE %in% "NA", "", REPORTED_VALUE)), size = 3)
   #  }
   #----------------------------------------------------------------------------
+  final.plot <- final.plot +
+    guides(fill = guide_colorbar(title = "Heatmap",
+                                 title.position = "top",
+                                 title.hjust = 0.5,
+                                 title.theme = element_text(face = "bold",
+                                                            size = 15,
+                                                            angle = 0),
+                                 ticks = FALSE))
   return(final.plot)
 }
