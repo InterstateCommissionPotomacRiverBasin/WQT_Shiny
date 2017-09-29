@@ -7,28 +7,21 @@ need <- c("shiny",
           "gridExtra",
           "grid",
           "dplyr",
-          "DBI",
+          #"DBI",
           "RPostgreSQL",
-          "pool",
+          #"pool",
           "data.table",
           "DT",
-          "Cairo",
+          #"Cairo",
+          #"keyring",
           "png",
-          "leaflet",
-          "rsconnect")#,
+          "leaflet")#,
+          #"rsconnect"
+          #)#,
           #"RcppRoll",
           #"zoo") 
-# find out which packages are installed
-ins <- installed.packages()[, 1] 
-# check if the needed packages are installed
-(Get <-
-    need[which(is.na(match(need, ins)))]) 
-# install the needed packages if they are not-installed
-if (length(Get) > 0) {
-  install.packages(Get)
-} 
 # load the needed packages
 eval(parse(text = paste("library(", need, ")")))
-rm(Get, ins, need)
+#devtools::install_github("rstudio/pool")
 #------------------------------------------------------------------------------
 options(shiny.usecairo = TRUE)
