@@ -1,3 +1,6 @@
+
+
+
 #============================================================================
 # Identify the currently selected parameter and site.
 #============================================================================
@@ -18,6 +21,9 @@ sel.huc <- reactive({
   if (input$query == "Parameter") final.vec <- input$HUC_8.param
   return(final.vec)
 })
+
+#==============================================================================
+conn <- pool::poolCheckout(pool)
 #==============================================================================
 # Upload data from postgres for the selected site.
 #==============================================================================
@@ -25,10 +31,9 @@ param.tbl <- reactive({
   #wqt <- dbReadTable(pool, paste0("SITE_", input$SITE.site))
   if (is.null(sel.site()) | sel.site() == "") return(NULL)
   if (is.null(sel.param())) return(NULL)
-  wqt <- dbGetQuery(pool, paste(
-    'SELECT * FROM "wq_data"',  
-    'WHERE "SITE" = ', paste0("'", sel.site(), "'"),
-    'AND "ICPRB_NAME" =', paste0("'", sel.param(), "'")))
+  wqt <- dbGetQuery(conn, paste(
+    'SELECT * FROM', paste0('"site_', sel.site(), '"'),
+    'WHERE "ICPRB_NAME" =', paste0("'", sel.param(), "'")))
   if (is.null(wqt)) return(NULL)
   if ("ICPRB_VALUE" %in% names(wqt)) {
     final.df <- wqt[!is.na(wqt$ICPRB_VALUE), ] %>% 
@@ -60,9 +65,9 @@ param.react <- reactive({
   if (is.null(sel.site())) {
     final.vec <- NULL
   } else {
-    final.vec <- unlist(dbGetQuery(pool, paste(
-      'SELECT DISTINCT "ICPRB_NAME" FROM "wq_data"',
-      'WHERE "SITE" = ', paste0("'", sel.site(), "'"))))
+    final.vec <- unlist(dbGetQuery(conn, paste(
+      'SELECT DISTINCT "ICPRB_NAME" FROM',
+      paste0('"site_', sel.site(), '"'))))
   }
   
   return(final.vec)
@@ -82,7 +87,8 @@ sel.gage <- reactive({
 #----------------------------------------------------------------------------
 gage.info.react <- reactive({
   if (is.null(sel.gage())) return(NULL)
-  final.df <- dbGetQuery(pool, paste(
+  #req(sel.gage())
+  final.df <- dbGetQuery(conn, paste(
     'SELECT * FROM "gage_info"',
     'WHERE "GAGE_ID" =', paste0("'", sel.gage(), "'")))
   if (nrow(final.df) == 0) final.df <- NULL
@@ -92,7 +98,7 @@ gage.info.react <- reactive({
 wilcox.react <- reactive({
   if (is.null(sel.param())) return(NULL)
   
-  final.df <- dbGetQuery(pool, paste(
+  final.df <- dbGetQuery(conn, paste(
     'SELECT "site", "trend", "icprb_name"',
     'FROM "wilcox_output"',
     'WHERE "icprb_name" =', paste0("'", sel.param(), "'")))
@@ -109,7 +115,8 @@ gage.tbl <- reactive({
       is.na(sel.gage())) {
     final.df <- NULL
   } else{
-    final.df <- dbGetQuery(pool, paste(
+#  req(sel.gage())
+    final.df <- dbGetQuery(conn, paste(
       'SELECT * FROM "gage_flow"',
       'WHERE "GAGE_ID" =', paste0("'", sel.gage(), "'")))
     if (nrow(final.df) == 0) final.df <- NULL
@@ -122,16 +129,16 @@ gage.tbl <- reactive({
 #==============================================================================
 # Upload depth data from postgres.
 #==============================================================================
-
 depth.react <- reactive({
-  #wqt <- dbReadTable(pool, paste0("SITE_", input$SITE.site))
-  if (is.null(sel.site()) | sel.site() == "") return(NULL)
-  if (is.null(sel.param())) return(NULL)
-  final.df <- dbGetQuery(pool, paste(
-    'SELECT "DEPTH" FROM',  '"wq_data"',
-    'WHERE "ICPRB_NAME" =', paste0("'", sel.param(), "'"),
-    'AND "SITE" = ', paste0("'", sel.site(), "'")))
+  req(sel.site())
+  req(sel.param())
+  final.df <- dbGetQuery(conn, paste(
+    'SELECT "DEPTH" FROM',  paste0('"site_', sel.site(), '"'),
+    'WHERE "ICPRB_NAME" =', paste0("'", sel.param(), "'")))
   if (is.null(final.df)) return(NULL)
   final.vec <- sort(unique(final.df$DEPTH))
   return(final.vec)
 }) # End depth.react
+#==============================================================================
+pool::poolReturn(conn)
+#==============================================================================

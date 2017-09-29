@@ -1,3 +1,16 @@
-install.packages(c("ggplot2", "RPostgreSQL", "shiny", "png", "DT", "dplyr",
-                   "shinythemes", "leaflet", "rsconnect", "data.table"))
-devtools::install_github("rstudio/pool")
+install.packages(c("shiny",
+                   "shinythemes",
+                   "ggplot2",
+                   #"gridExtra",
+                   "grid",
+                   "dplyr",
+                   #"DBI",
+                   #"RPostgreSQL",
+                   "pool",
+                   "data.table",
+                   "DT",
+                   "Cairo",
+                   "png",
+                   "leaflet"))
+
+
