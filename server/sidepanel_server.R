@@ -1,21 +1,23 @@
-observeEvent(sel.site(), {
-  # Prevent red error message from appearing while data is loading.
-  if(is.null(param.react())) return(NULL)
-  sub.param <- param.react()
-  
-  final.param <- unique(sort(as.character(sub.param)))
+param.vec <- reactive({
+  req(param.react())
+  final.param <- unique(param.react()) %>% 
+    as.character() %>% 
+    sort()
+})
+
   #============================================================================= 
   # Report ICPRB_UNITS
   #=============================================================================
+observeEvent(sel.site(), {
   output$ICPRB_UNIT <- renderUI({
-    # Prevent red error message from appearing while data is loading.
-    if(is.null(param.tbl())) return(NULL)
+    req(param.tbl())
     #============================================================================
     sub.param <- param.tbl()[param.tbl()$SITE %in% sel.site() & param.tbl()$ICPRB_NAME %in% sel.param(), ]
     units.vec <- unique(sub.param$ICPRB_UNITS)
     #============================================================================
     HTML(paste("<strong>Units:</strong>", units.vec, sep = " "))
   }) # End output$OUTLIERS
+
   #============================================================================= 
   # A count of how many outliers were removed from the data used to create the figures.
   # The outliers will still appear in the "Data" tab.
@@ -61,8 +63,9 @@ observeEvent(sel.site(), {
   #=============================================================================
   output$PARAM_LIST <- renderUI({
     # Prevent red error message from appearing while data is loading.
-    if(is.null(final.param)) return(NULL)
-    param.list <- paste(final.param, collapse = ",  ")
+    #if(is.null(final.param)) return(NULL)
+    req(param.vec())
+    param.list <- paste(param.vec(), collapse = ",  ")
     HTML(paste("<strong>Available Parameters:</strong>", param.list, sep = " "))
   }) # End output$PARAM_LIST
   #--------------------------------------------------------------------------

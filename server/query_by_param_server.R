@@ -10,7 +10,8 @@ observeEvent(sel.param(), {
 observeEvent(c(sel.param(), input$query == "Parameter",
                sel.huc()), {
                  # Prevent red error message from appearing while data is loading.
-                 if(is.null(sel.param())) return(NULL)
+                 #if(is.null(sel.param())) return(NULL)
+                 req(sel.param())
                  unique.huc8 <- unique(huc8[huc8$ICPRB_NAME %in% sel.param(), "HUC_8"])
                  final.huc8 <- c("All HUCs", sort(unique.huc8))
                  
@@ -27,7 +28,7 @@ observeEvent(c(sel.param(), input$query == "Parameter",
                  }
                  
                  
-                 observeEvent(c(sel.param()), {
+                 observeEvent(sel.param(), {
                    updateSelectInput(session, "HUC_8.param",
                                      choices = final.huc8,
                                      selected = select.this)
