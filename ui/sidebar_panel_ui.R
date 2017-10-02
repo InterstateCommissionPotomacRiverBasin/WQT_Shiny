@@ -58,16 +58,24 @@ sidebarPanel(
            tags$h3("Download"), align = "center"),
   # style font family as well in addition to background and font color
   tags$head(tags$style(".button{background-color:#56B4E9;} .button{color: black;}
-                       .button{font-family: Courier New;} .button{width: 250px;}
-                       .button{text-align: center;}")),
+                       .button{font-family: Courier New;} .button{width: 95%;}
+                       .button{text-align: center;}
+                       .button{font-size: 80%;}
+                       .button{padding: 10px;}")),
   # .button{font-weight: bold;}
-  div( fluidRow(p(downloadButton('plots.download', 'Download Plots', class = "button"))),
+  div(
+    p(
+      downloadButton('plots.download', 'Download Plots', class = "button")
+      ),
        style = "text-align: center;"),
-  div(fluidRow(p(downloadButton('param.tbl.download', 'Download Table', class = "button"))),
+  div(
+    p(
+      downloadButton('param.tbl.download', 'Download Table', class = "button")
+      ),
       style = "text-align: center;"),
   tags$hr(), # End Download Data Section
   #------------------------------------------------------------------------
-  div(img(src = "epa_logo.png", height = 180, width = 182), style = "text-align: center;"),
+  div(img(src = "epa_logo.png", height = "90%", width = "90%"), style = "text-align: center;"),
   tags$div(tags$b("United States Environmental Protection Agency"), align = "center"),
   tags$div(em("This tool was developed with support from U. S. Environmental
               Protection Agency (CWA §106 I-98339413) and the Interstate
@@ -75,13 +83,18 @@ sidebarPanel(
   tags$hr(), # End Support Section
   #------------------------------------------------------------------------
   #tags$div(class = "header", checked = NA, tags$h3("ICPRB"), align = "center"),
-  div(img(src = "logo.png", height = 220, width = 200), style = "text-align: center;"),
+  #div(img(src = "logo.png", height = "90%", width = "90%"), style = "text-align: center;"),
+  div(tags$a(img(src = "logo.png",
+                 height = "90%",
+                 width = "90%"),
+             href = "https://www.potomacriver.org",
+             target = "_blank"), style = "text-align: center;"),
   tags$div(tags$b("Interstate Commission on the Potomac River Basin"), align = "center"),
   tags$div(em("To enhance, protect, and conserve the water and associated land resources of the
-              Potomac River and its tributaries through regional and interstate cooperation."), align = "center"),
-  tags$div(a("https://www.potomacriver.org",
-             href = "https://www.potomacriver.org",
-             target = "_blank"),
-           align = "center") # End ICPRB section
+              Potomac River and its tributaries through regional and interstate cooperation."), align = "center")#,
+  #  tags$div(a("https://www.potomacriver.org",
+  #             href = "https://www.potomacriver.org",
+  #             target = "_blank"),
+  #           align = "center") # End ICPRB section
   
-  )
+)
