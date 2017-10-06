@@ -8,7 +8,7 @@
 #==============================================================================
 shinyUI(
   fluidPage(
-    titlePanel("EPA Region 3 Water Quality Trends"),
+    titlePanel("Water Quality Explorer"),
     #id = "tab",
     #inverse = TRUE,
     theme = shinythemes::shinytheme("cosmo"),
