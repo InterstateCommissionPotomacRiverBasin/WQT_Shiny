@@ -87,10 +87,11 @@ tile_plot <- function(plot.me, param.range){
 
     theme(#plot.title = element_text(hjust = 0.5, vjust = 8, face = "bold"),
       plot.title = element_blank(),
-      text = element_text(size = 12),
-      axis.text.x = element_text(size = 11, hjust = -0.2, vjust = 0),
+      #text = element_text(size = 10),
+      axis.text.x = element_text(size = 11, hjust = -0.3, vjust = 0),
       #axis.text.x = element_text(size = 11),
       axis.text.y = element_text(size = 11),
+      axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
       axis.title.x = element_blank(),
       legend.position = c(0.5, 1),
       legend.direction = "horizontal",
@@ -183,12 +184,15 @@ tile_plot <- function(plot.me, param.range){
   }
   #----------------------------------------------------------------------------
   if ("TEMP" %in% plot.me$ICPRB_NAME) {
+    temp.breaks <- c(-1, -0.01, 0, 29, 29.01, 30)
     final.plot <- final.plot +
-      scale_fill_gradientn(colors = c("tomato3", "#56B4E9", "#E69F00", "tomato3", "tomato3"),
-                           breaks = c( -0.01, 0, 29, 29.01, 30),
+      scale_fill_gradientn(colors = c("tomato3","tomato3",
+                                      "#56B4E9", "#E69F00",
+                                      "tomato3", "tomato3"),
+                           breaks = temp.breaks,
                            limits = c(-2, 31),
-                           values = scales::rescale(c(0, 0.1, 29, 29.01,  30)),
-                           labels = c( "", 0, 29, "", ""),
+                           values = scales::rescale(temp.breaks),
+                           labels = c("", "", 0, 29, "", ""),
                            guide = "colorbar",
                            na.value = "white",
                            oob = scales::squish) +
