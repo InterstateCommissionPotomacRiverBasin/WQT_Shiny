@@ -12,6 +12,7 @@ shinyUI(
     #id = "tab",
     #inverse = TRUE,
     theme = shinythemes::shinytheme("cosmo"),
+    tags$style(type="text/css", ".recalculating {opacity: 1.0;}"),
     #fluidPage(
     sidebarLayout(
       #------------------------------------------------------------------------

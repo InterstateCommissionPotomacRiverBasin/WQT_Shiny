@@ -1,5 +1,5 @@
 # Exract Lat/Long of selected site for plotting.
-points <- eventReactive(input$SITE.site, {
+points <- reactive({
   # Prevent red error message from appearing while data is loading.
   if(is.null(param.tbl())) return(NULL)
   
@@ -10,10 +10,10 @@ points <- eventReactive(input$SITE.site, {
   #final.df$GAGE <- FALSE
   final.df$TYPE <- "selected"
   return(final.df)
-}, ignoreNULL = FALSE) # End points
+}) # End points
 #----------------------------------------------------------------------------
 # Exract Lat/Long of selected site for plotting.
-points.gage <- eventReactive(sel.site(), {
+points.gage <- reactive({
   # Prevent red error message from appearing while data is loading.
   if(is.null(gage.info.react())) return(NULL)
   
@@ -28,7 +28,7 @@ points.gage <- eventReactive(sel.site(), {
   final.df$PROVIDERNAME <- "USGS"
   final.df$TYPE <- "Gage"
   return(final.df)
-}, ignoreNULL = FALSE) # End points.gage
+}) # End points.gage
 #============================================================================ 
 # use point symbols from base R graphics as icons
 pchIcons <- function(pch = 0:14, width = 30, height = 30, col = 1:15, ...) {
@@ -49,7 +49,6 @@ pchIcons <- function(pch = 0:14, width = 30, height = 30, col = 1:15, ...) {
 }
 #------------------------------------------------------------------------------
 map.reac <- reactive({
-  #if(is.null(param.tbl())) return(NULL)
   req(param.tbl())
   #  wilcox.df <- wilcox.react() %>% 
   #    mutate(trend = factor(.$trend, levels = c("none_not_significant",
@@ -84,19 +83,42 @@ map.reac <- reactive({
 })
 
 #============================================================================ 
+# Generate Map.
+
+#icprb.map <- "https://api.mapbox.com/styles/v1/skaisericprb/cizok18ny00302spia5zhre3o/tiles/256/{z}/{x}/{y}?access_token=pk.eyJ1Ijoic2thaXNlcmljcHJiIiwiYSI6ImNpa2U3cGN1dDAwMnl1cm0yMW94bWNxbDEifQ.pEG_X7fqCAowSN8Xr6rX8g"
+epa3.states <- maps::map("state", fill = TRUE) %>% 
+  fortify(region = "region") %>% 
+  filter(region %in% c("delaware", "district of columbia", "maryland",
+                       "pennsylvania", "virginia", "west virginia"))
+#--------------------------------------------------------------------------
+output$mymap <- renderLeaflet({
+leaflet.map <- leaflet::leaflet() %>%
+  addProviderTiles(providers$OpenStreetMap.Mapnik, options = tileOptions(minZoom = 7, maxZoom = 18)) %>%
+  #leaflet::addTiles(urlTemplate = icprb.map, options = tileOptions(minZoom = 7, maxZoom = 18)) %>%
+  leaflet::setMaxBounds(lng1 = -90, lat1 = 34, lng2 = -64, lat2 = 45) %>%
+  leaflet::setView(lng = -77.5, lat = 39.65305556, zoom = 7) %>% 
+  leaflet::addLegend(position = "topright",
+                     title = "Legend",
+                     labels = c( "Selected Site", "Flow Gage", "All Sites"),
+                     colors = c("#E69F00", "#0072B2", "#999999"),
+                     opacity = 1,
+                     labFormat = labelFormat(style = list(
+                       "color" = "red",
+                       "font-family" = "serif",
+                       "font-style" = "italic",
+                       "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
+                       "font-size" = "12px",
+                       "border-color" = "rgba(0,0,0,0.5)"
+                     )))
+})
+#============================================================================ 
 # Plot the Site on the map.
-rv <- reactiveValues(leaflet.map = NULL)
-observeEvent(c(sel.site(), sel.param()),{ 
+observe({
+  invalidateLater(1000)
   map.df <- map.reac()
-  #--------------------------------------------------------------------------
-  icprb.map <- "https://api.mapbox.com/styles/v1/skaisericprb/cizok18ny00302spia5zhre3o/tiles/256/{z}/{x}/{y}?access_token=pk.eyJ1Ijoic2thaXNlcmljcHJiIiwiYSI6ImNpa2U3cGN1dDAwMnl1cm0yMW94bWNxbDEifQ.pEG_X7fqCAowSN8Xr6rX8g"
-  #--------------------------------------------------------------------------
-  rv$leaflet.map <- leaflet::leaflet(map.df) %>%
-    #addTiles() %>%
-    leaflet::addTiles(urlTemplate = icprb.map, options = tileOptions(minZoom = 7, maxZoom = 18)) %>%
-    leaflet::setMaxBounds(lng1 = -90, lat1 = 34, lng2 = -64, lat2 = 45) %>%
-    leaflet::setView(lng = -77.5, lat = 39.65305556, zoom = 7) %>% 
-    #setView(lng = longitude, lat = latitude, zoom = 7) %>%
+  ## plot the subsetted ata
+  proxy <- leafletProxy("mymap") %>%
+    clearMarkers() %>%
     leaflet::addCircleMarkers(
       color = ~case_when(map.df$TYPE == "Other Sites" ~ "#999999",
                          map.df$TYPE == "Gage" ~ "#0072B2",
@@ -106,7 +128,7 @@ observeEvent(c(sel.site(), sel.param()),{
                           map.df$TYPE == "Gage" ~ 8,
                           map.df$TYPE == "Selected Site" ~ 10,
                           TRUE ~ 25),
-      opacity = ~case_when(map.df$TYPE == "Other Sites" ~ 0.75,
+      opacity = ~case_when(map.df$TYPE == "Other Sites" ~ 1,
                            map.df$TYPE == "Gage" ~ 1,
                            map.df$TYPE == "Selected Site" ~ 1,
                            TRUE ~ 25),
@@ -120,16 +142,7 @@ observeEvent(c(sel.site(), sel.param()),{
                     "<strong>Data Provider:</strong>", map.df$PROVIDERNAME, "<br/>",
                     "<strong>Latitude:</strong>", map.df$LATITUDE, "<br/>",
                     "<strong>Longitude:</strong>", map.df$LONGITUDE, "<br/>",
-                    "<strong>Site Description:</strong>", map.df$SITE_NAME_EDIT)) %>%
-    leaflet::addLegend(position = "topright",
-                       title = "Legend",
-                       labels = c( "Selected Site", "Flow Gage", "All Sites"),
-                       colors = c("#E69F00", "#0072B2", "#999999"),
-                       opacity = 1)
-  
-  #addProviderTiles("Hydda.Full",
-  #                 options = providerTileOptions(noWrap = TRUE)) %>%
+                    "<strong>Site Description:</strong>", map.df$SITE_NAME_EDIT))
+  return(proxy)
 
-  })
-
-output$mymap <- renderLeaflet({rv$leaflet.map})
+})

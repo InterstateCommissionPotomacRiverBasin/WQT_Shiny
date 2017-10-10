@@ -1,0 +1,13 @@
+name: WQT_Shiny
+title: WQT_Shiny
+username:
+account: zsmith
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 216756
+bundleId: 1014742
+url: https://zsmith.shinyapps.io/WQT_Shiny/
+when: 1507318376.42467
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: wqt_points.csv

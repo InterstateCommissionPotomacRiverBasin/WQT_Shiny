@@ -5,7 +5,13 @@ dt.references <- reactive({
                          paste('select * from "literature_references"',
                                'WHERE "Parameter(s)" LIKE',
                                paste0("'%", sub.param, "%'")))
-  final.dt <- datatable(final.df)
+  final.dt <- datatable(final.df,
+                        options = list(
+                          scrollX = 2000, 
+                          scrollY = 700,
+                          autoWidth = TRUE,
+                          pageLength = 25,
+                          color = "black"))
   return(final.dt)
 })
 

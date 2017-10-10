@@ -2,6 +2,7 @@
 conn <- pool::poolCheckout(pool)
 #==============================================================================
 # Import tables necessary for app.
+param.names <- dbReadTable(conn, "param_full_names")
 param.range <- dbReadTable(conn, "param_range")
 outliers <- dbReadTable(conn, "Outliers")
 huc8 <- dbReadTable(conn, "huc_8")

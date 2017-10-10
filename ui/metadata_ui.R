@@ -1,5 +1,5 @@
 tabPanel("Metadata",
-         tags$hr(),
+         #tags$hr(),
          tags$div(class = "header", checked = NA,
                   tags$h3("Identifying Outliers")),
          "All of data within the database was divided into subsets

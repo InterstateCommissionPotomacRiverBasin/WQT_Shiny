@@ -29,8 +29,7 @@ conn <- pool::poolCheckout(pool)
 #==============================================================================
 param.tbl <- reactive({
   #wqt <- dbReadTable(pool, paste0("SITE_", input$SITE.site))
-  if (is.null(sel.site()) | sel.site() == "") return(NULL)
-  if (is.null(sel.param())) return(NULL)
+  req(sel.site(), sel.param())
   wqt <- dbGetQuery(conn, paste(
     'SELECT * FROM', paste0('"site_', sel.site(), '"'),
     'WHERE "ICPRB_NAME" =', paste0("'", sel.param(), "'")))
@@ -111,7 +110,7 @@ wilcox.react <- reactive({
 # Upload data from postgres for the selected gage.
 #==============================================================================
 gage.tbl <- reactive({
-  if (is.null(sel.gage()) |
+  if (is.null(sel.gage()) ||
       is.na(sel.gage())) {
     final.df <- NULL
   } else{
@@ -119,8 +118,8 @@ gage.tbl <- reactive({
     final.df <- dbGetQuery(conn, paste(
       'SELECT * FROM "gage_flow"',
       'WHERE "GAGE_ID" =', paste0("'", sel.gage(), "'")))
-    if (nrow(final.df) == 0) final.df <- NULL
     final.df$GAGE_ID <- as.character(final.df$GAGE_ID)
+    if (nrow(final.df) == 0) final.df <- NULL
   }
 
   return(final.df)

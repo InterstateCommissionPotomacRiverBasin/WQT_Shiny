@@ -14,6 +14,7 @@ need <- c("shiny",
           "DT",
           #"Cairo",
           #"keyring",
+          "maps",
           "png",
           "leaflet")#,
           #"rsconnect"
