@@ -75,11 +75,9 @@ param.react <- reactive({
 # Import the gage information related to the selected values.
 #============================================================================
 sel.gage <- reactive({
-  if (is.null(param.tbl())){
-    final.vec <- NULL
-  } else {
-    final.vec <- unique(param.tbl()$GAGE_ID)
-  }
+  req(param.tbl())
+  final.vec <- unique(param.tbl()$GAGE_ID)
+  if (is.na(unique(final.vec))) return(NULL)
   if (length(final.vec) > 1) final.vec <- final.vec[!is.na(final.vec)]
   return(final.vec)
 })
@@ -90,12 +88,12 @@ gage.info.react <- reactive({
   final.df <- dbGetQuery(conn, paste(
     'SELECT * FROM "gage_info"',
     'WHERE "GAGE_ID" =', paste0("'", sel.gage(), "'")))
-  if (nrow(final.df) == 0) final.df <- NULL
+  if (nrow(final.df) == 0) return(NULL)
   return(final.df)
 }) # End param.react
 #----------------------------------------------------------------------------
 wilcox.react <- reactive({
-  if (is.null(sel.param())) return(NULL)
+  req(sel.param())
   
   final.df <- dbGetQuery(conn, paste(
     'SELECT "site", "trend", "icprb_name"',
@@ -129,8 +127,7 @@ gage.tbl <- reactive({
 # Upload depth data from postgres.
 #==============================================================================
 depth.react <- reactive({
-  req(sel.site())
-  req(sel.param())
+  req(sel.site(), sel.param())
   final.df <- dbGetQuery(conn, paste(
     'SELECT "DEPTH" FROM',  paste0('"site_', sel.site(), '"'),
     'WHERE "ICPRB_NAME" =', paste0("'", sel.param(), "'")))
