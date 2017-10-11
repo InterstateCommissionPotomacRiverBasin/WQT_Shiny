@@ -3,10 +3,13 @@
 #==========================================================================
 observeEvent(c(input$SITE.site, input$PARAM.site), {
   # Prevent red error message from appearing while data is loading.
-  if(is.null(param.react())) return(NULL)
+  req(param.react(),
+      param.tbl())
   sub.param <- param.react()
   
-  final.param <- unique(sort(as.character(sub.param)))
+  final.param <- as.character(sub.param) %>% 
+    sort() %>% 
+    unique()
   
   # When a new site is selected, the parameters are modified to reflect only
   # the parameters that have been measured at that site. If the currently
@@ -20,13 +23,19 @@ observeEvent(c(input$SITE.site, input$PARAM.site), {
   } else {
     select.this <- final.param[1]
   }
-#sub.param <- param.tbl()[param.tbl()$SITE %in% input$SITE.site & param.tbl()$PARAMETER %in% input$PARAM.site, ]
-sub.param <- param.tbl()[param.tbl()$SITE %in% input$SITE.site & 
-                           param.tbl()$ICPRB_NAME %in% input$PARAM.site, ]
-sub.outliers <- outliers[outliers$PARAMETER %in% input$PARAM.site, ]
+param.df <- param.tbl()
+sub.param <- param.df %>% 
+  filter(SITE %in% input$SITE.site,
+         ICPRB_NAME %in% input$PARAM.site)
+
+sub.outliers <- outliers %>% 
+  filter(PARAMETER %in% input$PARAM.site)
 #--------------------------------------------------------------------------
-outlier.count <- nrow(sub.param[sub.param$REPORTED_VALUE >= sub.outliers$UP_FENCE_4.5 |
-                                  sub.param$REPORTED_VALUE <= sub.outliers$LOW_FENCE_4.5, ])
+outlier.count <- sub.param %>% 
+  filter(REPORTED_VALUE >= sub.outliers$UP_FENCE_4.5,
+         REPORTED_VALUE <= sub.outliers$LOW_FENCE_4.5) %>% 
+  nrow()
+
 #--------------------------------------------------------------------------
 output$META_OUTLIER_INFO <- renderUI({
   HTML(paste(paste("<strong>Lower Fence:</strong>", unique(sub.outliers$LOW_FENCE_4.5), sep = " "),
@@ -49,13 +58,13 @@ sub.param_stand <- lapply(unique(sub.param$PROVIDERNAME), function(x){
   keep.cols[!keep.cols %in% names(sub.param)]
   
   return(unique(sub.param[sub.param$PROVIDERNAME %in% x, keep.cols]))
-  
+
 }) # End sub.param_stand
 #--------------------------------------------------------------------------
 output$PARAM_STAND_LOOP <- renderUI({
   #uni.list <- uni.func(sub.param$PARAMETER)
   #test.list <- list()
-  if (is.null(param.react()) || is.null(sub.param_stand)) return(NULL)
+  req(param.react(), sub.param_stand)
   param.list <- lapply(1:length(sub.param_stand), function(i) {
     
     sub.i <- data.frame(sub.param_stand[i], stringsAsFactors = FALSE)

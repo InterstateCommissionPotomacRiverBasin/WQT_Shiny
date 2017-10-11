@@ -1,14 +1,15 @@
 plots.reac <- reactive({
   # Prevent red error message from appearing while data is loading.
-  if(is.null(prep.react.monthly()) ||
-     is.null(prep.react.raw())) return(NULL)
+  req(prep.react.monthly(), prep.react.raw(), sel.param())
   #-------------------------------------------------------------------------
   monthly.df <- prep.react.monthly()
   #-------------------------------------------------------------------------
-  sub.outlier <- outliers[outliers$PARAMETER %in% sel.param(), ]
+  sub.outlier <- outliers %>% 
+    filter(PARAMETER %in% sel.param())
   raw.df <- param.tbl()
-  raw.df <- raw.df[raw.df$REPORTED_VALUE < sub.outlier$UP_FENCE_4.5 &
-                     raw.df$REPORTED_VALUE > sub.outlier$LOW_FENCE_4.5, ]
+  raw.df <- raw.df %>% 
+    filter(REPORTED_VALUE < sub.outlier$UP_FENCE_4.5, 
+           REPORTED_VALUE > sub.outlier$LOW_FENCE_4.5)
   #-------------------------------------------------------------------------
   tile.plot <- tile_plot(monthly.df, param.range)
   raw.loess.plot <- raw_loess_plot(raw.df)

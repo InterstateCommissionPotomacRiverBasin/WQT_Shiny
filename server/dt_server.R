@@ -1,21 +1,18 @@
 # Subset the data to only represent the selected Site and Parameter.
 input.react <- reactive({
   # Prevent red error message from appearing while data is loading.
-  if(is.null(param.tbl())) return(NULL)
+  req(param.tbl())
   sites <- param.tbl()
-  #final.df <- wqt[wqt$SITE %in% input$SITE.site, ]
-  #final.df <- sites[sites$SITE %in% input$SITE.site, ]
-  #final.df <- unique(final.df[final.df$PARAMETER %in% input$PARAM.site, ])
-  #final.df <- unique(final.df[final.df$ICPRB_NAME %in% input$PARAM.site, ])
-  final.df <- sites[order(sites$DATE), ]
+
+  final.df <- sites %>% 
+    arrange(DATE)
   return(final.df)
 }) # End input.react
 #============================================================================= 
 # Create the DataTable.
 dt.react <- reactive({
-  if (is.null(sel.param())) return(NULL)
-  # Prevent red error message from appearing while data is loading.
-  if(is.null(input.react())) return(NULL)
+  req(sel.param(), input.react())
+
   
   final.dt <- datatable(input.react(),
                         options = list(
@@ -39,9 +36,7 @@ output$param_table <- DT::renderDataTable(dt.react()) # End output$param_table
 #============================================================================= 
 # Create the DataTable.
 dt.react2 <- reactive({
-  #if (is.null(sel.param())) return(NULL)
-  # Prevent red error message from appearing while data is loading.
-  #if(is.null(gage.tbl())) return(NULL)
+  req(gage.tble())
   
   final.dt <- datatable(gage.tbl())
   
