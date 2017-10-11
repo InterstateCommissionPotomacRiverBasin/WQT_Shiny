@@ -44,6 +44,7 @@ shinyServer(function(input, output, session) {
   source("server/relevant_pubs_server.R", local = TRUE)
   
   outputOptions(output, "mymap", suspendWhenHidden = FALSE)
+
 #  lapply(c("PLOTS", "param_table", #"mymap",
            #"META_OUTLIER_INFO", "PARAM_STAND_LOOP",
            #"SITE_INFO_LOOP", "ALL_DEPTH",
